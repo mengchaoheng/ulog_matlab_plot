@@ -86,7 +86,7 @@ for i = 1:num
     hold on;
 end
 
-title('Signal Corrupted with Zero-Mean Random Noise')
+title('Signal')
 xlabel('t (seconds)')
 ylabel('X(t)')
 legend(le_str,'Location','northeastoutside','box','off');
@@ -117,7 +117,7 @@ for i = 1:num
     le_str{i} = ['P1_',num2str(i)];
     hold on;
 end
-title('Single-Sided Amplitude Spectrum of X(t)')
+title('FFT of X(t)')
 xlabel('f (Hz)')
 ylabel('|P1(f)|')
 legend(le_str,'Location','northeastoutside','box','off');
@@ -190,6 +190,9 @@ figure,
 PP=PP1+PP2+PP3;
 imagesc(TT1,FF1,10*log10(PP));
 set(gca,'YDir','normal')
-title('Draw with P')
+% title('功率谱密度')
+xlabel('时间 t/s');
+ylabel('频率 f/Hz');
+title('短时傅里叶时频图');
 h=colorbar;
 h.Label.String = 'Power/Frequency(dB/Hz)'
