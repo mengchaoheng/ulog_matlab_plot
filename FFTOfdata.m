@@ -2,7 +2,8 @@
 % Use Fourier transforms to find the frequency components of a signal buried 
 % in noise.
 % 假设数据按列存储，每一列是一种数据，L为数据长度，num为存储数据的数量
-X=load('all_17.01.22.csv');
+clc;clear all;close all;
+X=load('all_17.01.22.csv'); %acc or gyro
 %% 
 % calculate the sampling time and frequency.
 
@@ -61,3 +62,43 @@ title('Single-Sided Amplitude Spectrum of X(t)')
 xlabel('f (Hz)')
 ylabel('|P1(f)|')
 legend(le_str,'Location','northeastoutside','box','off');
+
+%%功率谱密度
+window = hamming(256);
+noverlap = 128;
+nfft = 2^nextpow2(length(window));
+fs = Fs;
+%%
+% figure,
+% subplot(131)
+% spectrogram(X(:,1), window, noverlap, nfft,fs, 'yaxis');  % Display the spectrogram
+% title('Call directly')
+% h=colorbar;
+% h.Label.String = 'Power/Frequency(dB/Hz)'
+% 
+% [SS, FF, TT, PP] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+% subplot(132)
+% imagesc(TT,FF,10*log10(PP));
+% set(gca,'YDir','normal')
+% title('Draw with P')
+% h=colorbar;
+% h.Label.String = 'Power/Frequency(dB/Hz)'
+% 
+% subplot(133)
+% k = 2/(fs*(window'*window))
+% imagesc(TT,FF,10*log10(abs(SS).*abs(SS)*k));
+% set(gca,'YDir','normal')
+% title('Draw with S')
+% h=colorbar;
+% h.Label.String = 'Power/Frequency(dB/Hz)'
+%%
+figure,
+[SS1, FF1, TT1, PP1] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+[~, ~, ~, PP2] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+[~, ~, ~, PP3] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+PP=PP1+PP2+PP3;
+imagesc(TT1,FF1,10*log10(PP));
+set(gca,'YDir','normal')
+title('Draw with P')
+h=colorbar;
+h.Label.String = 'Power/Frequency(dB/Hz)'
