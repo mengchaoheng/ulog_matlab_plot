@@ -25,17 +25,17 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = 'log_34_2023-3-8-03-05-18'; % the ulog file name 
+ulgFileName = 'log_37_2023-3-8-03-53-04'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
     load(ulgFileName,'log');
 else
-
-    command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
-
     % on macOS, run " which ulog2csv " on terminal to get it.
+    % command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
+
     % on windows and linux just make sure you have installed pyulog
+    command = ['!ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv,
 
 	eval(command);
     log.data = csv_topics_to_d(ulgFileName);

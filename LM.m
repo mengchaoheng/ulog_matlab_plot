@@ -31,11 +31,11 @@ tmp=[ ulgFileName '.mat'];
 if exist(tmp,"file")
     load(ulgFileName,'log');
 else
-
+    % on macOS, run " which ulog2csv " on terminal to get it.
     command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
 
-    % on macOS, run " which ulog2csv " on terminal to get it.
     % on windows and linux just make sure you have installed pyulog
+    % command = ['!ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
 
 	eval(command);
     log.data = csv_topics_to_d(ulgFileName);
