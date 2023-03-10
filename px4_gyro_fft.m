@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = '12_12_50'; % the ulog file name 
+ulgFileName = '12_03_39'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -54,8 +54,8 @@ end
 % timestamp=log.data.vehicle_acceleration_0{:,1};
 % X=log.data.vehicle_acceleration_0{:,3:5};
 % calculate the sampling time and frequency.
-timestamp=log.data.sensor_combined_0{:,1};
-X=log.data.sensor_combined_0{:,7:9};
+timestamp=log.data.sensor_gyro_0{:,1};
+X=log.data.sensor_gyro_0{:,4:6};
 
 
 rate_N=size(X(:,1));
