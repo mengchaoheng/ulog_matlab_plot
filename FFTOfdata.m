@@ -3,7 +3,9 @@
 % in noise.
 % 假设数据按列存储，每一列是一种数据，L为数据长度，num为存储数据的数量
 clc;clear all;close all;
-X=load('all_15.56.53(1).csv'); %acc or gyro
+% X_all=load('all_17.51.48.csv'); %acc or gyro
+X_all=load('all_18.51.16.csv'); %acc or gyro
+X=X_all(:,1:3)/100;
 %% 
 % calculate the sampling time and frequency.
 
