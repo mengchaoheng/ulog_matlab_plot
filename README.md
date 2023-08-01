@@ -2,9 +2,9 @@ This is a tiny plot tool of matlab for ulog form PX4, which inspired by [matulog
 
 it have been test on MacOS Monterey 12.3 and win10, matlab 2021b.
 
-Requirements: 
+Requirements:
 
-1.matlab2016a (or a newer version) 
+1.matlab2016a (or a newer version)
 
 2.python.
 
@@ -16,3 +16,8 @@ To run:
 - Clone or download the repo
 
 - In Matlab run ulog_plot after setup the path and file name
+
+```
+WARNING: The scripts ulog2csv, ulog2kml, ulog2rosbag, ulog_extract_gps_dump, ulog_info, ulog_messages, ulog_migratedb and ulog_params are installed in '/Users/mch/Library/Python/3.8/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+```

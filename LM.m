@@ -1,4 +1,4 @@
-% clear all;
+clear all;
 close all;
 clc;
 addpath(genpath(pwd));
@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = 'test1'; % the ulog file name 
+ulgFileName = '09_07_56'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -48,8 +48,9 @@ else
     log.info = '';
     %run add_fields_in_preprocessing.m
     save(ulgFileName,'log')
-    delete(['*' ulgFileName '*.csv'])
+%     delete(['*' ulgFileName '*.csv'])
 end
+
 
 vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,1:5};
 vehicle_rates_setpoint=log.data.vehicle_rates_setpoint_0{:,:};
@@ -82,16 +83,16 @@ for i=1:attitude_N-1
 attitude_delta_t(i)=(vehicle_attitude_setpoint(i+1,1))*1e-6-(vehicle_attitude_setpoint(i,1))*1e-6;
 end
 
-data_LM=load('all_17.01.22.csv');
+data_LM=load('all_10.00.50(1).csv')/100;
 
 len =size(data_LM);
 Roll_LM=data_LM(:,1);
 Pitch_LM=data_LM(:,2);
 Yaw_LM=data_LM(:,3);
-dt=0.0177;
+dt=0.023;
 t=0:dt:(len-1)*dt;
 
-start=302;
+start=450;
 start2=1;
 %% and maybe more figure, all in the variable "log.data"
 figure,

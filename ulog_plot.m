@@ -25,7 +25,7 @@ Height =10;    %
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = 'test2'; % the ulog file name 
+ulgFileName = '08_20_02'; % the ulog file name 
 tmp=[ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -52,6 +52,31 @@ end
     vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,1:5};
     vehicle_rates_setpoint=log.data.vehicle_rates_setpoint_0{:,:};
 
+    vehicle_attitude=log.data.vehicle_attitude_0{:,:};
+    vehicle_attitude_setpoint=log.data.vehicle_attitude_setpoint_0{:,:};
+    q_0=vehicle_attitude(:,3);
+    q_1=vehicle_attitude(:,4);
+    q_2=vehicle_attitude(:,5);
+    q_3=vehicle_attitude(:,6);
+    Roll=quat_to_roll(q_0,q_1,q_2,q_3);
+    Pitch=quat_to_pitch(q_0,q_1,q_2,q_3);
+    Yaw=quat_to_yaw(q_0,q_1,q_2,q_3);
+    q_d_0=vehicle_attitude_setpoint(:,6);
+    q_d_1=vehicle_attitude_setpoint(:,7);
+    q_d_2=vehicle_attitude_setpoint(:,8);
+    q_d_3=vehicle_attitude_setpoint(:,9);
+    Roll_d=quat_to_roll(q_d_0,q_d_1,q_d_2,q_d_3);
+    Pitch_d=quat_to_pitch(q_d_0,q_d_1,q_d_2,q_d_3);
+    Yaw_d=quat_to_yaw(q_d_0,q_d_1,q_d_2,q_d_3);
+
+
+    time=vehicle_attitude_setpoint(:,1)*1e-6;
+    N= length(time)-1;
+    dt=zeros(N,1);
+    for i=1:N
+        dt(i)=time(i+1)-time(i);
+    end
+
 
 fig1=figure;
 
@@ -68,5 +93,27 @@ set(fig1.CurrentAxes, 'FontSize', 8,'FontName','Times New Roman','LabelFontSizeM
 % fig1.CurrentAxes.YAxis.Exponent = -1;
 % fig1.CurrentAxes.XTick = [0 1 2 3 4];
 % fig1.CurrentAxes.YTick = [-20 0 20 40];
-PlotToFileColorPDF(fig1,'Fig_vehicle_rates.pdf',Width,Height);
+% PlotToFileColorPDF(fig1,'Fig_vehicle_rates.pdf',Width,Height);
 %% and maybe more figure, all in the variable "log.data"
+
+fig2=figure;
+
+subplot(3,1,1);
+plot((vehicle_attitude(:,1))*1e-6-(vehicle_attitude(1,1))*1e-6, Roll(:)*r2d,'k-','LineWidth',1);hold on;
+plot((vehicle_attitude_setpoint(:,1))*1e-6-(vehicle_attitude_setpoint(1,1))*1e-6, Roll_d(:)*r2d,'r-','LineWidth',1);hold on;
+grid on;
+xlabel({'Time(s)'});
+ylabel('Roll (deg)')
+title('Euler Angle Estimates');
+%% and maybe more figure, all in the variable "log.data"
+subplot(3,1,2);
+plot((vehicle_attitude(:,1))*1e-6-(vehicle_attitude(1,1))*1e-6, Pitch(:)*r2d,'k-','LineWidth',1);hold on;
+plot((vehicle_attitude_setpoint(:,1))*1e-6-(vehicle_attitude_setpoint(1,1))*1e-6, Pitch_d(:)*r2d,'r-','LineWidth',1);hold on;
+grid on;
+xlabel({'Time(s)'});
+ylabel('Pitch (deg)')
+%% and maybe more figure, all in the variable "log.data"
+subplot(3,1,3);
+plot((vehicle_attitude(:,1))*1e-6-(vehicle_attitude(1,1))*1e-6, Yaw(:)*r2d,'k-','LineWidth',1);hold on;
+plot((vehicle_attitude_setpoint(:,1))*1e-6-(vehicle_attitude_setpoint(1,1))*1e-6, Yaw_d(:)*r2d,'r-','LineWidth',1);hold on;
+
