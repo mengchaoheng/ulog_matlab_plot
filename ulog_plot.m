@@ -25,7 +25,7 @@ Height =10;    %
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = '08_20_02'; % the ulog file name 
+ulgFileName = '02_04_34'; % the ulog file name 
 tmp=[ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -33,7 +33,7 @@ if exist(tmp,"file")
 else
     if ismac
         % on macOS, run " which ulog2csv " on terminal to get it.
-        command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
+        command = ['!/Users/mch/opt/anaconda3/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
     else
         % on windows and linux just make sure you have installed pyulog
         command = ['!ulog2csv ' ulgFileName '.ulg']; % have installed ulog2csv,
@@ -58,16 +58,16 @@ end
     q_1=vehicle_attitude(:,4);
     q_2=vehicle_attitude(:,5);
     q_3=vehicle_attitude(:,6);
-    Roll=quat_to_roll(q_0,q_1,q_2,q_3);
-    Pitch=quat_to_pitch(q_0,q_1,q_2,q_3);
-    Yaw=quat_to_yaw(q_0,q_1,q_2,q_3);
+    Roll=quat_to_roll([q_0 q_1 q_2 q_3]);
+    Pitch=quat_to_pitch([q_0 q_1 q_2 q_3]);
+    Yaw=quat_to_yaw([q_0 q_1 q_2 q_3]);
     q_d_0=vehicle_attitude_setpoint(:,6);
     q_d_1=vehicle_attitude_setpoint(:,7);
     q_d_2=vehicle_attitude_setpoint(:,8);
     q_d_3=vehicle_attitude_setpoint(:,9);
-    Roll_d=quat_to_roll(q_d_0,q_d_1,q_d_2,q_d_3);
-    Pitch_d=quat_to_pitch(q_d_0,q_d_1,q_d_2,q_d_3);
-    Yaw_d=quat_to_yaw(q_d_0,q_d_1,q_d_2,q_d_3);
+    Roll_d=quat_to_roll([q_d_0 q_d_1 q_d_2 q_d_3]);
+    Pitch_d=quat_to_pitch([q_d_0 q_d_1 q_d_2 q_d_3]);
+    Yaw_d=quat_to_yaw([q_d_0 q_d_1 q_d_2 q_d_3]);
 
 
     time=vehicle_attitude_setpoint(:,1)*1e-6;
