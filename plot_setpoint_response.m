@@ -51,7 +51,7 @@ else
     delete(['*' ulgFileName '*.csv'])
 end
 
-vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,1:5};
+vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,:};
 vehicle_rates_setpoint=log.data.vehicle_rates_setpoint_0{:,:};
 vehicle_attitude=log.data.vehicle_attitude_0{:,:};
 vehicle_attitude_setpoint=log.data.vehicle_attitude_setpoint_0{:,:};
@@ -70,84 +70,182 @@ Roll_setpoint=quat_to_roll([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]
 Pitch_setpoint=quat_to_pitch([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]);
 Yaw_setpoint=quat_to_yaw([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]);
 
-rate_N=size(vehicle_rates_setpoint(:,1));
-rate_delta_t=zeros(rate_N-1);
+
+vehicle_local_position=log.data.vehicle_local_position_0{:,:}; 
+XYZ=vehicle_local_position(:,6:8);
+V_XYZ=vehicle_local_position(:,12:14);
+
+vehicle_local_position_setpoint=log.data.vehicle_local_position_setpoint_0{:,:}; 
+XYZ_setpoint=vehicle_local_position_setpoint(:,2:4);
+V_XYZ_setpoint=vehicle_local_position_setpoint(:,7:9);
+
+[rate_N,~]=size(vehicle_rates_setpoint(:,1));
+rate_delta_t=zeros(rate_N-1,1);
 for i=1:rate_N-1
 rate_delta_t(i)=(vehicle_rates_setpoint(i+1,1))*1e-6-(vehicle_rates_setpoint(i,1))*1e-6;
 end
 
-attitude_N=size(vehicle_attitude_setpoint(:,1));
-attitude_delta_t=zeros(attitude_N-1);
+[attitude_N,~]=size(vehicle_attitude_setpoint(:,1));
+attitude_delta_t=zeros(attitude_N-1,1);
 for i=1:attitude_N-1
 attitude_delta_t(i)=(vehicle_attitude_setpoint(i+1,1))*1e-6-(vehicle_attitude_setpoint(i,1))*1e-6;
 end
 
+[pose_N,~]=size(vehicle_local_position_setpoint(:,1));
+pose_delta_t=zeros(pose_N-1,1);
+for i=1:pose_N-1
+pose_delta_t(i)=(vehicle_local_position_setpoint(i+1,1))*1e-6-(vehicle_local_position_setpoint(i,1))*1e-6;
+end
+
+
+
+
 %% 
 figure,
+subplot(311)
 plot((vehicle_rates_setpoint(:,1))*1e-6, vehicle_rates_setpoint(:,2)*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,3)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Roll rate');
+ylabel('p(deg/s)')
+title('Angular velocity');
+legend('Setpoint','Response');
 %% 
-figure,
+subplot(312)
 plot((vehicle_rates_setpoint(:,1))*1e-6, vehicle_rates_setpoint(:,3)*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,4)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Pitch rate');
+ylabel('q(deg/s)')
+% title('Pitch angular velocity');
+legend('Setpoint','Response');
 %% 
-figure,
+subplot(313)
 plot((vehicle_rates_setpoint(:,1))*1e-6, vehicle_rates_setpoint(:,4)*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,5)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Yaw rate');
+ylabel('r(deg/s)')
+% title('Yaw angular velocity');
+legend('Setpoint','Response');
+%% 
+
+
+
 
 %% and maybe more figure, all in the variable "log.data"
 figure,
+subplot(311)
 plot((vehicle_attitude_setpoint(:,1))*1e-6, Roll_setpoint*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_attitude(:,1))*1e-6, Roll*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Roll');%legend('boxoff');
-
+ylabel('Roll(deg)')
+title('Euler angular');
+legend('Setpoint','Response');
 %% and maybe more figure, all in the variable "log.data"
-figure,
+subplot(312)
 plot((vehicle_attitude_setpoint(:,1))*1e-6, Pitch_setpoint*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_attitude(:,1))*1e-6, Pitch*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Pitch');%legend('boxoff');
+ylabel('Pitch(deg)')
+legend('Setpoint','Response');
 %% and maybe more figure, all in the variable "log.data"
-figure,
+subplot(313)
 plot((vehicle_attitude_setpoint(:,1))*1e-6, Yaw_setpoint*r2d,'k-','LineWidth',1);hold on;
 plot((vehicle_attitude(:,1))*1e-6, Yaw*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Angular velocity(deg/s)')
-% title('Pitch angular rate');
-legend('Yaw');%legend('boxoff');
-
+ylabel('Yaw(deg)')
+legend('Setpoint','Response');
 %% 
-figure,
-plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
-figure,
-plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
 
+
+
+
+
+
+%% and maybe more figure, all in the variable "log.data"
+figure,
+subplot(311)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, V_XYZ_setpoint(:,1),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+title('Velocity');
+xlabel({'Time(s)'});
+ylabel('V_X(m/s)')
+legend('Setpoint','Response');
+%% and maybe more figure, all in the variable "log.data"
+subplot(312)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, V_XYZ_setpoint(:,2),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+xlabel({'Time(s)'});
+ylabel('V_Y(m/s)')
+legend('Setpoint','Response');
+%% and maybe more figure, all in the variable "log.data"
+subplot(313)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, V_XYZ_setpoint(:,3),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+xlabel({'Time(s)'});
+ylabel('V_Z(m/s)')
+legend('Setpoint','Response');
+%% 
+
+
+
+
+
+%% and maybe more figure, all in the variable "log.data"
+figure,
+subplot(311)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, XYZ_setpoint(:,1),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+title('Position');
+xlabel({'Time(s)'});
+ylabel('X(m/s)')
+legend('Setpoint','Response');
+%% and maybe more figure, all in the variable "log.data"
+subplot(312)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, XYZ_setpoint(:,2),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+xlabel({'Time(s)'});
+ylabel('Y(m/s)')
+legend('Setpoint','Response');
+%% and maybe more figure, all in the variable "log.data"
+subplot(313)
+plot((vehicle_local_position_setpoint(:,1))*1e-6, XYZ_setpoint(:,3),'k-','LineWidth',1);hold on;
+plot((vehicle_local_position(:,1))*1e-6, XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+% axis([-inf inf -100 100]);
+xlabel({'Time(s)'});
+ylabel('Z(m/s)')
+legend('Setpoint','Response');
+
+
+
+
+% 
+% %% 
+% figure,
+% subplot(311)
+% plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
+% subplot(312)
+% plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
+% subplot(313)
+% plot(1:pose_N-1, pose_delta_t,'k-','LineWidth',1);hold on;
