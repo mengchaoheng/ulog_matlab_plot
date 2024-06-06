@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = 'test3'; % the ulog file name 
+ulgFileName = '04_09_33'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -33,7 +33,7 @@ if exist(tmp,"file")
 else
     if ismac
         % on macOS, run " which ulog2csv " on terminal to get it.
-        command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
+        command = ['!/Users/mch/opt/anaconda3/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
     else
         % on windows and linux just make sure you have installed pyulog
         command = ['!ulog2csv ' ulgFileName '.ulg']; % have installed ulog2csv,
@@ -79,6 +79,22 @@ vehicle_local_position_setpoint=log.data.vehicle_local_position_setpoint_0{:,:};
 XYZ_setpoint=vehicle_local_position_setpoint(:,2:4);
 V_XYZ_setpoint=vehicle_local_position_setpoint(:,7:9);
 
+actuator_controls=log.data.actuator_controls_0_0{:,:};   
+Roll_control=actuator_controls(:,3);
+Pitch_control=actuator_controls(:,4);
+Yaw_control=actuator_controls(:,5);
+
+
+actuator_outputs=log.data.actuator_outputs_0{:,:};   
+cs1=actuator_outputs(:,5);
+cs2=actuator_outputs(:,6);
+cs3=actuator_outputs(:,7);
+cs4=actuator_outputs(:,8);
+
+
+indi_feedback_input=log.data.indi_feedback_input_0{:,:};     
+
+
 [rate_N,~]=size(vehicle_rates_setpoint(:,1));
 rate_delta_t=zeros(rate_N-1,1);
 for i=1:rate_N-1
@@ -97,9 +113,17 @@ for i=1:pose_N-1
 pose_delta_t(i)=(vehicle_local_position_setpoint(i+1,1))*1e-6-(vehicle_local_position_setpoint(i,1))*1e-6;
 end
 
+[actuator_N,~]=size(actuator_controls(:,1));
+actuator_delta_t=zeros(actuator_N-1,1);
+for i=1:actuator_N-1
+actuator_delta_t(i)=(actuator_controls(i+1,1))*1e-6-(actuator_controls(i,1))*1e-6;
+end
 
-
-
+[cs_N,~]=size(actuator_outputs(:,1));
+cs_delta_t=zeros(cs_N-1,1);
+for i=1:cs_N-1
+cs_delta_t(i)=(actuator_outputs(i+1,1))*1e-6-(actuator_outputs(i,1))*1e-6;
+end
 %% 
 figure,
 subplot(311)
@@ -216,7 +240,7 @@ grid on;
 % axis([-inf inf -100 100]);
 title('Position');
 xlabel({'Time(s)'});
-ylabel('X(m/s)')
+ylabel('X(m)')
 legend('Setpoint','Response');
 %% and maybe more figure, all in the variable "log.data"
 subplot(312)
@@ -225,7 +249,7 @@ plot((vehicle_local_position(:,1))*1e-6, XYZ(:,2),'--','LineWidth',1,'color',[0.
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Y(m/s)')
+ylabel('Y(m)')
 legend('Setpoint','Response');
 %% and maybe more figure, all in the variable "log.data"
 subplot(313)
@@ -234,11 +258,154 @@ plot((vehicle_local_position(:,1))*1e-6, XYZ(:,3),'--','LineWidth',1,'color',[0.
 grid on;
 % axis([-inf inf -100 100]);
 xlabel({'Time(s)'});
-ylabel('Z(m/s)')
+ylabel('Z(m)')
 legend('Setpoint','Response');
+%% 
 
 
 
+
+
+%% 
+figure,
+subplot(411)
+plot((actuator_controls(:,1))*1e-6, Roll_control(:,1),'r-','LineWidth',1);hold on;
+plot((actuator_controls(:,1))*1e-6, Pitch_control(:,1),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+title('Actuator controls');
+xlabel({'Time(s)'});
+ylabel('Control')
+legend('Roll','Pitch',  'Yaw');
+subplot(412)
+plot((actuator_controls(:,1))*1e-6, Roll_control(:,1),'r-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Roll control')
+subplot(413)
+plot((actuator_controls(:,1))*1e-6, Pitch_control(:,1),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Pitch control')
+subplot(414)
+plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Yaw control')
+%% 
+
+
+
+
+
+%% 
+figure,
+subplot(411)
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,3),'r-','LineWidth',1);hold on;
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,4),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,5),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+title('indi feedback input');
+xlabel({'Time(s)'});
+ylabel('Control')
+legend('Roll','Pitch', 'Yaw');
+subplot(412)
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,3),'r-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Roll control')
+subplot(413)
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,4),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Pitch control')
+subplot(414)
+plot((indi_feedback_input(:,1))*1e-6, indi_feedback_input(:,5),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Yaw control')
+%% 
+
+
+%% 
+figure,
+subplot(411)
+plot((actuator_controls(:,1))*1e-6, Roll_control(:,1)-indi_feedback_input(:,3),'r-','LineWidth',1);hold on;
+plot((actuator_controls(:,1))*1e-6, Pitch_control(:,1)-indi_feedback_input(:,4),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1)-indi_feedback_input(:,5),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+title('dynamic controls');
+xlabel({'Time(s)'});
+ylabel('Control')
+legend('Roll','Pitch',  'Yaw');
+subplot(412)
+plot((actuator_controls(:,1))*1e-6, Roll_control(:,1)-indi_feedback_input(:,3),'r-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Roll control')
+subplot(413)
+plot((actuator_controls(:,1))*1e-6, Pitch_control(:,1)-indi_feedback_input(:,4),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Pitch control')
+subplot(414)
+plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1)-indi_feedback_input(:,5),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf -0.5 0.5]);
+xlabel({'Time(s)'});
+ylabel('Yaw control')
+%% 
+
+
+%% 
+figure,
+subplot(511)
+plot((actuator_outputs(:,1))*1e-6, cs1(:,1),'r-','LineWidth',1);hold on;
+plot((actuator_outputs(:,1))*1e-6, cs2(:,1),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+plot((actuator_outputs(:,1))*1e-6, cs3(:,1),'b-','LineWidth',1);hold on;
+plot((actuator_outputs(:,1))*1e-6, cs4(:,1),'g-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf 800 2000]);
+title('control surface');
+xlabel({'Time(s)'});
+ylabel('Deflection(pwm)')
+legend('cs1','cs2','cs3','cs4');
+subplot(512)
+plot((actuator_outputs(:,1))*1e-6, cs1(:,1),'r-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf 800 2000]);
+xlabel({'Time(s)'});
+ylabel('cs1')
+subplot(513)
+plot((actuator_outputs(:,1))*1e-6, cs2(:,1),'k-','LineWidth',1,'color',[0.6,0.2,0]);hold on;
+grid on;
+axis([-inf inf 800 2000]);
+xlabel({'Time(s)'});
+ylabel('cs2')
+subplot(514)
+plot((actuator_outputs(:,1))*1e-6, cs3(:,1),'b-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf 800 2000]);
+xlabel({'Time(s)'});
+ylabel('cs3')
+subplot(515)
+plot((actuator_outputs(:,1))*1e-6, cs4(:,1),'g-','LineWidth',1);hold on;
+grid on;
+axis([-inf inf 800 2000]);
+xlabel({'Time(s)'});
+ylabel('cs4')
+%% 
 
 % 
 % %% 
