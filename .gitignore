@@ -5,3 +5,4 @@ all_*.csv
 *_*_*.ulg
 *.asv
 *.txt
+/results

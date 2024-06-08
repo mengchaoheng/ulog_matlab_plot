@@ -7,7 +7,7 @@ set(gcf,'PaperSize',[x,y])
 set(gcf,'PaperPositionMode','manual')
 set(gcf,'PaperPosition',[0,0,x,y]);
 set(gcf, 'renderer', 'painters');
-print(filename,'-dpdf','-r600')
+% print(filename,'-dpdf','-r600')
 % export_fig( gcf , '-pdf' , '-r600' , '-painters' , './filename');
 % print(gcf, '-dpdf','-r600', '.\filename'); 
 
