@@ -34,7 +34,7 @@ r2d=180/pi;
 
 
  %% pca test:16_37_44 12_15_41
-ulgFileName = '17_41_40'; % the ulog file name. load 06_28_53 06_45_38  06_54_35 wind 11_39_14  15_57_58 wp:17_09_30, endurance:17_14_37 (18.9) 06_26_32 (17.8) 06_50_20 (19.6) (19.5) 07_10_30 (18.6)
+ulgFileName = '12_18_06'; % the ulog file name. load 06_28_53 06_45_38  06_54_35 wind 11_39_14  15_57_58 wp:17_09_30, endurance:17_14_37 (18.9) 06_26_32 (17.8) 06_50_20 (19.6) (19.5) 07_10_30 (18.6)
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -643,8 +643,8 @@ end
 if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     fig15=figure(15);
     subplot(311)
-    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
-    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,3)*r2d,'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,3),'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,3)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
     title('角加速度');
@@ -653,8 +653,8 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     legend('angular acc','gyro');
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
-    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,4),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
-    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,4)*r2d,'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,4),'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,4)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
     xlabel({'时间(s)'});
@@ -662,8 +662,8 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     legend('angular acc','gyro');
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
-    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,5),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
-    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,5)*r2d,'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_acceleration(:,1)-vehicle_angular_acceleration(1,1))*1e-6, vehicle_angular_acceleration(:,5),'k-','LineWidth',1);hold on;
+    plot((vehicle_angular_velocity(:,1)-vehicle_angular_velocity(1,1))*1e-6, vehicle_angular_velocity(:,5)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
     xlabel({'时间(s)'});
