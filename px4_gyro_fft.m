@@ -1,4 +1,4 @@
-clear all;
+clear;
 close all;
 clc;
 addpath(genpath(pwd));
@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = '12_03_39'; % the ulog file name       12_12_50
+ulgFileName = 'log100'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -56,15 +56,15 @@ end
 % calculate the sampling time and frequency.
 timestamp=log.data.sensor_gyro_0{:,1};
 X=log.data.sensor_gyro_0{:,4:6};
-
-
-rate_N=size(X(:,1));
+sensor_gyro_fifo=log.data.sensor_gyro_fifo_0; %table
+% [t_new,xyz_new]=add_virtual_fifo_topic_data(sensor_gyro_fifo);
+rate_N=size(timestamp);
 rate_delta_t=zeros(rate_N-1);
 for i=1:rate_N-1
-rate_delta_t(i)=(X(i+1,1))*1e-6-(X(i,1))*1e-6;
+  rate_delta_t(i)=(timestamp(i+1))*1e-6-(timestamp(i))*1e-6;
 end
 
-L = size(X,1);   % Length of signal
+L = size(timestamp,1);   % Length of signal
 
 T=(timestamp(end)-timestamp(1))*1e-6/L; % Sampling period  (second)
 Fs=round(1/T); % Sampling frequency
@@ -85,6 +85,11 @@ for i = 1:num
     le_str{i} = ['X_',num2str(i)];
     hold on;
 end
+% for i = 1:num
+%     plot((t_new-t_new(1))*1e-6,xyz_new(:,i));
+%     le_str{i+3} = ['X new_',num2str(i)];
+%     hold on;
+% end
 
 title('Signal')
 xlabel('t (seconds)')
@@ -185,8 +190,8 @@ fs = Fs;
 %%
 figure,
 [SS1, FF1, TT1, PP1] = spectrogram(X(:,1), window, noverlap, nfft,fs);
-[~, ~, ~, PP2] = spectrogram(X(:,1), window, noverlap, nfft,fs);
-[~, ~, ~, PP3] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+[~, ~, ~, PP2] = spectrogram(X(:,2), window, noverlap, nfft,fs);
+[~, ~, ~, PP3] = spectrogram(X(:,3), window, noverlap, nfft,fs);
 PP=PP1+PP2+PP3;
 imagesc(TT1,FF1,10*log10(PP));
 set(gca,'YDir','normal')
@@ -196,3 +201,5 @@ ylabel('频率 f/Hz');
 title('短时傅里叶时频图');
 h=colorbar;
 h.Label.String = 'Power/Frequency(dB/Hz)'
+
+
