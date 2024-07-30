@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = '17_52_00'; % the ulog file name 
+ulgFileName = '08_21_58'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -33,7 +33,7 @@ if exist(tmp,"file")
 else
     if ismac
         % on macOS, run " which ulog2csv " on terminal to get it.
-        command = ['!/usr/local/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
+        command = ['!/Users/mch/opt/anaconda3/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
     else
         % on windows and linux just make sure you have installed pyulog
         command = ['!ulog2csv ' ulgFileName '.ulg']; % have installed ulog2csv,

@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = 'log100'; % the ulog file name 
+ulgFileName = '08_21_58'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")

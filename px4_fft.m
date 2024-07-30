@@ -25,7 +25,7 @@ addpath(genpath(pwd));
 d2r=pi/180;
 r2d=180/pi;
 %%
-ulgFileName = '12_12_50'; % the ulog file name 
+ulgFileName = '08_21_58'; % the ulog file name 
 tmp=[ ulgFileName '.mat'];
 % exist tmp var
 if exist(tmp,"file")
@@ -185,8 +185,8 @@ fs = Fs;
 %%
 figure,
 [SS1, FF1, TT1, PP1] = spectrogram(X(:,1), window, noverlap, nfft,fs);
-[~, ~, ~, PP2] = spectrogram(X(:,1), window, noverlap, nfft,fs);
-[~, ~, ~, PP3] = spectrogram(X(:,1), window, noverlap, nfft,fs);
+[~, ~, ~, PP2] = spectrogram(X(:,2), window, noverlap, nfft,fs);
+[~, ~, ~, PP3] = spectrogram(X(:,3), window, noverlap, nfft,fs);
 PP=PP1+PP2+PP3;
 imagesc(TT1,FF1,10*log10(PP));
 set(gca,'YDir','normal')

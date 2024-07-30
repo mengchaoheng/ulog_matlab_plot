@@ -15,7 +15,7 @@ Requirements:
 To run:
 - Clone or download the repo
 
-- In Matlab run ulog_plot after setup the path and file name
+- In Matlab run plot_setpoint_response.m after setup the path and file name
 
 ```
 WARNING: The scripts ulog2csv, ulog2kml, ulog2rosbag, ulog_extract_gps_dump, ulog_info, ulog_messages, ulog_migratedb and ulog_params are installed in '/Users/mch/Library/Python/3.8/bin' which is not on PATH.
