@@ -51,8 +51,8 @@ r2d=180/pi;
 % 20240616  05_31_54  14_03_42 06_20_57 15_12_39
  %% pca test:16_37_44 12_15_41 15_03_31  df-1.12.3 (15_10_14)
 
- % real flight 07_18_37  12_03_09   (important high rate:08_43_49  08_44_10 all:08_21_58 ekf:08_49_36)
-ulgFileName = '12_00_29'; % the ulog file name. load 06_28_53 06_45_38  06_54_35 wind 11_39_14  15_57_58 wp:17_09_30, endurance:17_14_37 (18.9) 06_26_32 (17.8) 06_50_20 (19.6) (19.5) 07_10_30 (18.6)
+ % real flight 07_18_37  12_03_09   (important high rate:08_43_49  08_44_10 all:08_21_58 ekf:08_49_36) 
+ulgFileName = '13_33_15'; % the ulog file name. load 06_28_53 06_45_38  06_54_35 wind 11_39_14  15_57_58 wp:17_09_30, endurance:17_14_37 (18.9) 06_26_32 (17.8) 06_50_20 (19.6) (19.5) 07_10_30 (18.6)
 tmp=[ ulgFileName '.mat'];
 % exist tmp var05_31_54.ulg
 if exist(tmp,"file")
@@ -566,7 +566,7 @@ if(isfield(log.data, 'vehicle_local_position_0') && isfield(log.data, 'vehicle_l
     xlabel('X(m)');
     ylabel('Y(m)');
     zlabel('Z(m)');
-    axis([-7 7 -7 7 -0.5 5]);% indoor
+    % axis([-7 7 -7 7 -0.5 5]);% indoor
     % 设置图例
     legend1=legend('给定轨迹', '位置响应');
     set(legend1,...
@@ -631,7 +631,7 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_acceleration(:,1))*1e-6, vehicle_angular_acceleration(:,3),'k-','LineWidth',1);hold on;
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,3),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
-    % axis([0 1200 -inf inf]);
+    % axis([-inf inf -20 20]);
     title('角加速度');
     xlabel({'时间(s)'});
     ylabel('p(rad/s^2)')
@@ -641,7 +641,7 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_acceleration(:,1))*1e-6, vehicle_angular_acceleration(:,4),'k-','LineWidth',1);hold on;
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,4),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
-    % axis([0 1200 -inf inf]);
+    % axis([-inf inf -20 20]);
     xlabel({'时间(s)'});
     ylabel('q(rad/s^2)')
     legend('angular acc','gyro');
@@ -650,7 +650,7 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_acceleration(:,1))*1e-6, vehicle_angular_acceleration(:,5),'k-','LineWidth',1);hold on;
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,5),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
-    % axis([0 1200 -inf inf]);
+    % axis([-inf inf -20 20]);
     xlabel({'时间(s)'});
     ylabel('r(rad/s^2)')
     legend('angular acc','gyro');
