@@ -244,7 +244,89 @@ if(isfield(log.data, 'vehicle_visual_odometry_0'))
     visual_odometry_q3=vehicle_visual_odometry(:,9);
     
 end
+if ismember('rate_control_running_time', log.data.actuator_controls_0_0.Properties.VariableNames)
+    disp('INDI running time (us)');
+    mean(actuator_controls(actuator_controls(:,19)==1,18))
+    disp('PID running time (us)');
+    mean(actuator_controls(actuator_controls(:,19)==0,18))
+end
 
+
+%%
+if(isfield(log.data, 'vehicle_angular_velocity_0'))
+    figure,
+    plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle angular velocity');
+    disp('mean(rate_delta_t)');
+    mean(rate_delta_t)/rate_dowm_simple
+end
+if(isfield(log.data, 'vehicle_rates_setpoint_0'))
+    figure,
+    plot(1:rate_setpoint_N-1, rate_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle rate setpoint');
+    disp('mean(rate_setpoint_delta_t)');
+    mean(rate_setpoint_delta_t)/att_dowm_simple
+end
+if(isfield(log.data, 'vehicle_angular_acceleration_0'))
+    figure,
+    plot(1:rate_acc_N-1, rate_acc_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle angular acceleration');
+    disp('mean(rate_acc_delta_t)');
+    mean(rate_acc_delta_t)
+end
+if(isfield(log.data, 'vehicle_attitude_0'))
+    figure,
+    plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle attitude');
+    disp('mean(attitude_delta_t)');
+    mean(attitude_delta_t)/att_dowm_simple
+
+end
+if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
+    figure,
+    plot(1:attitude_setpoint_N-1, attitude_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle attitude setpoint');
+    disp('mean(attitude_setpoint_delta_t)');
+    mean(attitude_setpoint_delta_t)/att_set_dowm_simple
+
+end
+if(isfield(log.data, 'vehicle_local_position_0'))
+    figure,
+    plot(1:pose_N-1, pose_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle local position');
+    disp('mean(pose_delta_t)');
+    mean(pose_delta_t)
+end
+if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
+    figure,
+    plot(1:pose_setpoint_N-1, pose_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle local position setpoint');
+    disp('mean(pose_setpoint_delta_t)');
+    mean(pose_setpoint_delta_t)
+end
+if(isfield(log.data, 'actuator_controls_0_0'))
+    figure,
+    plot(1:actuator_N-1, actuator_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('actuator controls');
+    disp('mean(actuator_delta_t)');
+    mean(actuator_delta_t)/rate_dowm_simple
+end 
+if(isfield(log.data, 'actuator_outputs_0'))
+    figure,
+    plot(1:cs_N-1, cs_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('actuator outputs');
+    disp('mean(cs_delta_t)');
+    mean(cs_delta_t)/rate_dowm_simple
+end
 
 %% plot
 if(isfield(log.data, 'vehicle_angular_velocity_0') && isfield(log.data, 'vehicle_rates_setpoint_0'))
@@ -713,87 +795,4 @@ end
     ylabel('偏转指令(pwm)')
     legend('cs1','cs2','cs3','cs4');
     
-end
-if ismember('rate_control_running_time', log.data.actuator_controls_0_0.Properties.VariableNames)
-    disp('INDI running time (us)');
-    mean(actuator_controls(actuator_controls(:,19)==1,18))
-    disp('PID running time (us)');
-    mean(actuator_controls(actuator_controls(:,19)==0,18))
-end
-
-
-%%
-if(isfield(log.data, 'vehicle_angular_velocity_0'))
-    figure,
-    plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle angular velocity');
-    disp('mean(rate_delta_t)');
-    mean(rate_delta_t)/rate_dowm_simple
-end
-if(isfield(log.data, 'vehicle_rates_setpoint_0'))
-    figure,
-    plot(1:rate_setpoint_N-1, rate_setpoint_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle rate setpoint');
-    disp('mean(rate_setpoint_delta_t)');
-    mean(rate_setpoint_delta_t)/att_dowm_simple
-end
-if(isfield(log.data, 'vehicle_angular_acceleration_0'))
-    figure,
-    plot(1:rate_acc_N-1, rate_acc_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle angular acceleration');
-    disp('mean(rate_acc_delta_t)');
-    mean(rate_acc_delta_t)
-end
-if(isfield(log.data, 'vehicle_attitude_0'))
-    figure,
-    plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle attitude');
-    disp('mean(attitude_delta_t)');
-    mean(attitude_delta_t)/att_dowm_simple
-
-end
-if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
-    figure,
-    plot(1:attitude_setpoint_N-1, attitude_setpoint_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle attitude setpoint');
-    disp('mean(attitude_setpoint_delta_t)');
-    mean(attitude_setpoint_delta_t)/att_set_dowm_simple
-
-end
-if(isfield(log.data, 'vehicle_local_position_0'))
-    figure,
-    plot(1:pose_N-1, pose_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle local position');
-    disp('mean(pose_delta_t)');
-    mean(pose_delta_t)
-end
-if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
-    figure,
-    plot(1:pose_setpoint_N-1, pose_setpoint_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle local position setpoint');
-    disp('mean(pose_setpoint_delta_t)');
-    mean(pose_setpoint_delta_t)
-end
-if(isfield(log.data, 'actuator_controls_0_0'))
-    figure,
-    plot(1:actuator_N-1, actuator_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('actuator controls');
-    disp('mean(actuator_delta_t)');
-    mean(actuator_delta_t)/rate_dowm_simple
-end 
-if(isfield(log.data, 'actuator_outputs_0'))
-    figure,
-    plot(1:cs_N-1, cs_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('actuator outputs');
-    disp('mean(cs_delta_t)');
-    mean(cs_delta_t)/rate_dowm_simple
 end
