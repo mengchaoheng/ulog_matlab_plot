@@ -1,14 +1,13 @@
-function PlotToFileColorPDF(gcf,filename,x,y)
-%
-% Print the current plot at size (x,y) to an eps file
-%
-set(gcf,'PaperUnits','centimeters')
-set(gcf,'PaperSize',[x,y])
-set(gcf,'PaperPositionMode','manual')
-set(gcf,'PaperPosition',[0,0,x,y]);
-set(gcf, 'renderer', 'painters');
-% print(filename,'-dpdf','-r600')
-% export_fig( gcf , '-pdf' , '-r600' , '-painters' , './filename');
-% print(gcf, '-dpdf','-r600', '.\filename'); 
-
+function PlotToFileColorPDF(gcf, filename, width_cm, height_cm)
+    set(gcf, 'Units', 'centimeters');
+    set(gcf, 'Position', [0, 0, width_cm, height_cm]);
+    
+    exportgraphics(gcf, filename, ...
+        'ContentType', 'vector', ...
+        'BackgroundColor', 'white', ...
+        'Resolution', 1200, ...
+        'Width',  width_cm,...
+        'Height', height_cm,...
+        'Padding', "tight",...
+        'Units', "centimeters");
 end

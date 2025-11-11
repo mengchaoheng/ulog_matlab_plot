@@ -5,4 +5,6 @@ all_*.csv
 *_*_*.ulg
 *.asv
 *.txt
-/results
+/results/*
+/data/*
+!/data/log_40_2025-6-24-14-58-42.ulg

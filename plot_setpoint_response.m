@@ -3,7 +3,7 @@ close all;
 clc;
 addpath(genpath(pwd));
 % you can run on terminal 
-% ulog2csv log_8_2021-5-20-11-52-08.ulg 
+% ulog2csv log_.ulg 
 % to get csv files
 % =====================1==========================
 % Install pyulog using pip first.https://github.com/PX4/pyulog.
@@ -24,62 +24,90 @@ addpath(genpath(pwd));
 
 d2r=pi/180;
 r2d=180/pi;
-%% new method: defualt pid for endurance load wp , remove I for wind and max vel
-% endurance:(17_14_37 1127s) 12_07_46 1137s   11_10_22 1140s  11_37_27 1120s  
-% load:06_28_53 06_45_38  06_54_35
-% wp:17_09_30 
-% wind: 11_39_14  15_57_58
- % mav vel: 09_19_16 10_27_37
+%------------------------------------------
+% 设定 ULog 相对路径
+%------------------------------------------
+ulgFileName = 'data/log_40_2025-6-24-14-58-42';
+tmp = [ulgFileName '.mat'];
 
-%% 2023 flight data
-% Users/mch/Documents/FlightLog/log/2023-02-24/06_12_56.ulg
-% 06_22_46
-% 06_44_14
-% 07_04_47
-% 07_26_57
+% 记录当前主脚本路径
+rootDir = fileparts(mfilename('fullpath'));
 
-% 03_43_50
-% /Users/mch/Documents/FlightLog/log/2023-02-23/07_44_32.ulg
-% 07_45_53
-% 07_48_07
-% 07_50_17
-% 08_06_35
-% 08_29_05
-% 08_39_27
+%------------------------------------------
+% Step 1: 检查是否已有 MAT 文件
+%------------------------------------------
+if exist(fullfile(rootDir, tmp), "file")
+    disp(['✅ Found MAT file: ' tmp]);
+    load(fullfile(rootDir, tmp), 'log');
 
-% 20240614 08_15_39 08_39_28 09_05_41 09_15_41 
-% 20240616  05_31_54  14_03_42 06_20_57 15_12_39
- %% pca test:16_37_44 12_15_41 15_03_31  df-1.12.3 (15_10_14)
-
- % real flight 07_18_37  12_03_09   (important high rate:08_43_49  08_44_10 all:08_21_58 ekf:08_49_36) 
-ulgFileName = '13_33_15'; % the ulog file name. load 06_28_53 06_45_38  06_54_35 wind 11_39_14  15_57_58 wp:17_09_30, endurance:17_14_37 (18.9) 06_26_32 (17.8) 06_50_20 (19.6) (19.5) 07_10_30 (18.6)
-tmp=[ ulgFileName '.mat'];
-% exist tmp var05_31_54.ulg
-if exist(tmp,"file")
-    load(ulgFileName,'log');
 else
+    disp('⚙️ No MAT file found, start parsing ULog...');
+
+    %------------------------------------------
+    % Step 2: 执行 ulog2csv（保持路径完整）
+    %------------------------------------------
     if ismac
-        % on macOS, run " which ulog2csv " on terminal to get it.
-        command = ['!/Users/mch/opt/anaconda3/bin/ulog2csv ' ulgFileName '.ulg']; % /usr/local/bin/ is the path of ulog2csv, 
+        ulog2csv_path = '/Users/mch/Library/Python/3.9/bin/ulog2csv';
     else
-        % on windows and linux just make sure you have installed pyulog
-        command = ['!ulog2csv ' ulgFileName '.ulg']; % have installed ulog2csv,
+        ulog2csv_path = 'ulog2csv';
     end
 
-	eval(command);
-    log.data = csv_topics_to_d(ulgFileName);
+    ulgAbs = fullfile(rootDir, [ulgFileName '.ulg']);
+    command = ['!' ulog2csv_path ' ' '"' ulgAbs '"'];
+    disp(['📄 Running command: ' command]);
+    eval(command);
+
+    %------------------------------------------
+    % Step 3: 调用解析函数（传完整路径）
+    %------------------------------------------
+    log.data = csv_topics_to_d(fullfile(rootDir, ulgFileName));
     log.FileName = ulgFileName;
     log.version = 1.0;
     log.params = '';
     log.messages = '';
     log.info = '';
-    %run add_fields_in_preprocessing.m
-    save(ulgFileName,'log')
-    delete(['*' ulgFileName '*.csv'])
+
+    %------------------------------------------
+    % Step 4: 保存 MAT 文件到同目录
+    %------------------------------------------
+    save(fullfile(rootDir, tmp), 'log');
+    disp(['💾 Saved MAT file: ' tmp]);
+
+    %------------------------------------------
+    % Step 5: 删除临时 CSV
+    %------------------------------------------
+    delete(fullfile(rootDir, [ulgFileName '_*.csv']));
+    disp('🧹 Temporary CSV files deleted.');
 end
 %%
+
+if(isfield(log.data, 'parameter_update_0'))
+    parameter_update=log.data.parameter_update_0{:,:};
+    flag=parameter_update(:,1);
+    
+end 
+if(isfield(log.data, 'input_rc_0'))
+    input_rc=log.data.input_rc_0{:,:};
+    [input_rc_N,~]=size(input_rc(:,1));
+    input_rc_delta_t=zeros(input_rc_N-1,1);
+    for i=1:input_rc_N-1
+        input_rc_delta_t(i)=(input_rc(i+1,1))*1e-6-(input_rc(i,1))*1e-6;
+    end
+    
+end 
+
+%% sitl
+rate_dowm_simple=10;
+att_dowm_simple=10;
+att_set_dowm_simple=5;
+k=0.05;
+%% fmu
+% rate_dowm_simple=3;
+% att_dowm_simple=2;
+% att_set_dowm_simple=1;
+%%
 if(isfield(log.data, 'vehicle_angular_velocity_0'))
-    vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,:};
+    vehicle_angular_velocity=log.data.vehicle_angular_velocity_0{:,:}(1:rate_dowm_simple:end, :);
     [rate_N,~]=size(vehicle_angular_velocity(:,1));
     rate_delta_t=zeros(rate_N-1,1);
     for i=1:rate_N-1
@@ -87,7 +115,7 @@ if(isfield(log.data, 'vehicle_angular_velocity_0'))
     end
 end 
 if(isfield(log.data, 'vehicle_angular_acceleration_0'))
-    vehicle_angular_acceleration=log.data.vehicle_angular_acceleration_0{:,:};
+    vehicle_angular_acceleration=log.data.vehicle_angular_acceleration_0{:,:}(1:rate_dowm_simple:end, :);
     [rate_acc_N,~]=size(vehicle_angular_acceleration(:,1));
     rate_acc_delta_t=zeros(rate_acc_N-1,1);
     for i=1:rate_acc_N-1
@@ -95,15 +123,15 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     end
 end 
 if(isfield(log.data, 'vehicle_rates_setpoint_0'))
-    vehicle_rates_setpoint=log.data.vehicle_rates_setpoint_0{:,:};
-    % [rate_N,~]=size(vehicle_rates_setpoint(:,1));
-    % rate_delta_t=zeros(rate_N-1,1);
-    % for i=1:rate_N-1
-    %     rate_delta_t(i)=(vehicle_rates_setpoint(i+1,1))*1e-6-(vehicle_rates_setpoint(i,1))*1e-6;
-    % end
+    vehicle_rates_setpoint=log.data.vehicle_rates_setpoint_0{:,:}(1:att_dowm_simple:end, :);
+    [rate_setpoint_N,~]=size(vehicle_rates_setpoint(:,1));
+    rate_setpoint_delta_t=zeros(rate_setpoint_N-1,1);
+    for i=1:rate_setpoint_N-1
+        rate_setpoint_delta_t(i)=(vehicle_rates_setpoint(i+1,1))*1e-6-(vehicle_rates_setpoint(i,1))*1e-6;
+    end
 end 
 if(isfield(log.data, 'vehicle_attitude_0'))
-    vehicle_attitude=log.data.vehicle_attitude_0{:,:};
+    vehicle_attitude=log.data.vehicle_attitude_0{:,:}(1:att_dowm_simple:end, :);
     q_0=vehicle_attitude(:,3);
     q_1=vehicle_attitude(:,4);
     q_2=vehicle_attitude(:,5);
@@ -111,9 +139,14 @@ if(isfield(log.data, 'vehicle_attitude_0'))
     Roll=quat_to_roll([q_0 q_1 q_2 q_3]);
     Pitch=quat_to_pitch([q_0 q_1 q_2 q_3]);
     Yaw=quat_to_yaw([q_0 q_1 q_2 q_3]);
+    [attitude_N,~]=size(vehicle_attitude(:,1));
+    attitude_delta_t=zeros(attitude_N-1,1);
+    for i=1:attitude_N-1
+        attitude_delta_t(i)=(vehicle_attitude(i+1,1))*1e-6-(vehicle_attitude(i,1))*1e-6;
+    end
 end 
 if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
-    vehicle_attitude_setpoint=log.data.vehicle_attitude_setpoint_0{:,:};
+    vehicle_attitude_setpoint=log.data.vehicle_attitude_setpoint_0{:,:}(1:att_set_dowm_simple:end, :);
     q_0_setpoint=vehicle_attitude_setpoint(:,6);
     q_1_setpoint=vehicle_attitude_setpoint(:,7);
     q_2_setpoint=vehicle_attitude_setpoint(:,8);
@@ -121,10 +154,10 @@ if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
     Roll_setpoint=quat_to_roll([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]);
     Pitch_setpoint=quat_to_pitch([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]);
     Yaw_setpoint=quat_to_yaw([q_0_setpoint q_1_setpoint q_2_setpoint q_3_setpoint]);
-    [attitude_N,~]=size(vehicle_attitude_setpoint(:,1));
-    attitude_delta_t=zeros(attitude_N-1,1);
-    for i=1:attitude_N-1
-        attitude_delta_t(i)=(vehicle_attitude_setpoint(i+1,1))*1e-6-(vehicle_attitude_setpoint(i,1))*1e-6;
+    [attitude_setpoint_N,~]=size(vehicle_attitude_setpoint(:,1));
+    attitude_setpoint_delta_t=zeros(attitude_setpoint_N-1,1);
+    for i=1:attitude_setpoint_N-1
+        attitude_setpoint_delta_t(i)=(vehicle_attitude_setpoint(i+1,1))*1e-6-(vehicle_attitude_setpoint(i,1))*1e-6;
     end
 end 
 
@@ -132,24 +165,26 @@ if(isfield(log.data, 'vehicle_local_position_0'))
     vehicle_local_position=log.data.vehicle_local_position_0{:,:};
     XYZ=vehicle_local_position(:,6:8);
     V_XYZ=vehicle_local_position(:,12:14);
+    [pose_N,~]=size(vehicle_local_position(:,1));
+    pose_delta_t=zeros(pose_N-1,1);
+    for i=1:pose_N-1
+        pose_delta_t(i)=(vehicle_local_position(i+1,1))*1e-6-(vehicle_local_position(i,1))*1e-6;
+    end
 end 
 
 if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
     vehicle_local_position_setpoint=log.data.vehicle_local_position_setpoint_0{:,:};
     XYZ_setpoint=vehicle_local_position_setpoint(:,2:4);
     V_XYZ_setpoint=vehicle_local_position_setpoint(:,7:9);
-    [pose_N,~]=size(vehicle_local_position_setpoint(:,1));
-    pose_delta_t=zeros(pose_N-1,1);
-    for i=1:pose_N-1
-        pose_delta_t(i)=(vehicle_local_position_setpoint(i+1,1))*1e-6-(vehicle_local_position_setpoint(i,1))*1e-6;
+    [pose_setpoint_N,~]=size(vehicle_local_position_setpoint(:,1));
+    pose_setpoint_delta_t=zeros(pose_setpoint_N-1,1);
+    for i=1:pose_setpoint_N-1
+        pose_setpoint_delta_t(i)=(vehicle_local_position_setpoint(i+1,1))*1e-6-(vehicle_local_position_setpoint(i,1))*1e-6;
     end
 end 
 
-
-
-
 if(isfield(log.data, 'actuator_controls_0_0'))
-    actuator_controls=log.data.actuator_controls_0_0{:,:};   
+    actuator_controls=log.data.actuator_controls_0_0{:,:}(1:rate_dowm_simple:end, :);   
     Roll_control=actuator_controls(:,3);
     Pitch_control=actuator_controls(:,4);
     Yaw_control=actuator_controls(:,5);
@@ -159,27 +194,43 @@ if(isfield(log.data, 'actuator_controls_0_0'))
     end
     [actuator_N,~]=size(actuator_controls(:,1));
     actuator_delta_t=zeros(actuator_N-1,1);
+    actuator_delta=zeros(actuator_N-1,1);
     for i=1:actuator_N-1
         actuator_delta_t(i)=(actuator_controls(i+1,1))*1e-6-(actuator_controls(i,1))*1e-6;
     end
+    for i=1:actuator_N-1
+        actuator_delta(i)=actuator_controls(i+1,3)-actuator_controls(i,3) ;
+    end
 end
 if(isfield(log.data, 'actuator_outputs_0'))
-    actuator_outputs=log.data.actuator_outputs_0{:,:};   
+    actuator_outputs=log.data.actuator_outputs_0{:,:}(1:rate_dowm_simple:end, :);   
     cs1=actuator_outputs(:,7);
     cs2=actuator_outputs(:,8);
     cs3=actuator_outputs(:,9);
     cs4=actuator_outputs(:,10);
     [cs_N,~]=size(actuator_outputs(:,1));
     cs_delta_t=zeros(cs_N-1,1);
+    cs_delta=zeros(cs_N-1,1);
     for i=1:cs_N-1
         cs_delta_t(i)=(actuator_outputs(i+1,1))*1e-6-(actuator_outputs(i,1))*1e-6;
+    end
+    for i=1:cs_N-1
+        cs_delta(i)=actuator_outputs(i+1,7)-actuator_outputs(i,7);
     end
 end
 
 
 if(isfield(log.data, 'allocation_value_0'))
-    allocation_value=log.data.allocation_value_0{:,:};
-
+    allocation_value=log.data.allocation_value_0{:,:}(1:rate_dowm_simple:end, :);
+    [allocation_value_N,~]=size(allocation_value(:,1));
+    allocation_value_delta_t=zeros(allocation_value_N-1,1);
+    allocation_value_delta=zeros(allocation_value_N-1,1);
+    for i=1:allocation_value_N-1
+        allocation_value_delta_t(i)=(allocation_value(i+1,1))*1e-6-(allocation_value(i,1))*1e-6;
+    end
+    for i=1:allocation_value_N-1
+        allocation_value_delta(i)=allocation_value(i+1,12)-allocation_value(i,12);
+    end
 end 
 
 if(isfield(log.data, 'vehicle_visual_odometry_0'))
@@ -195,7 +246,7 @@ if(isfield(log.data, 'vehicle_visual_odometry_0'))
 end
 
 
-%% 
+%% plot
 if(isfield(log.data, 'vehicle_angular_velocity_0') && isfield(log.data, 'vehicle_rates_setpoint_0'))
     fig1=figure(1);
     subplot(311)
@@ -203,32 +254,31 @@ if(isfield(log.data, 'vehicle_angular_velocity_0') && isfield(log.data, 'vehicle
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,3)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('滚转(deg/s)')
-    title('角速度');
-    legend('给定','响应');
+    xlabel({'Time (s)'});
+    ylabel('p (deg/s)')
+    title('Angular velocity');
+    legend('Setpoint','Response');
     %% 
     subplot(312)
     plot((vehicle_rates_setpoint(:,1))*1e-6, vehicle_rates_setpoint(:,3)*r2d,'k-','LineWidth',1);hold on;
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,4)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('俯仰(deg/s)')
-    % title('Pitch angular velocity');
-    legend('给定','响应');
+    xlabel({'Time (s)'});
+    ylabel('q (deg/s)')
+    legend('Setpoint','Response');
     %% 
     subplot(313)
     plot((vehicle_rates_setpoint(:,1))*1e-6, vehicle_rates_setpoint(:,4)*r2d,'k-','LineWidth',1);hold on;
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,5)*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('偏航(deg/s)')
+    xlabel({'Time (s)'});
+    ylabel('r (deg/s)')
     % title('Yaw angular velocity');
-    legend('给定','响应');
+    legend('Setpoint','Response');
     %% 
-    PlotToFileColorPDF(fig1,'results/pqr.png',15,20); % or 'pqr.png'
+    % PlotToFileColorPDF(fig1,'results/pqr.pdf',15,20); 
 end
 
 
@@ -240,30 +290,30 @@ if(isfield(log.data, 'vehicle_attitude_setpoint_0') && isfield(log.data, 'vehicl
     plot((vehicle_attitude(:,1))*1e-6, Roll*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('滚转角(deg)')
-    title('姿态角');
-    legend('给定','响应');
+    xlabel({'Time (s)'});
+    ylabel('Roll (deg)')
+    title('Euler angle');
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
     plot((vehicle_attitude_setpoint(:,1))*1e-6, Pitch_setpoint*r2d,'k-','LineWidth',1);hold on;
     plot((vehicle_attitude(:,1))*1e-6, Pitch*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('俯仰角(deg)')
-    legend('给定','响应');
+    xlabel({'Time (s)'});
+    ylabel('Pitch (deg)')
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
     plot((vehicle_attitude_setpoint(:,1))*1e-6, Yaw_setpoint*r2d,'k-','LineWidth',1);hold on;
     plot((vehicle_attitude(:,1))*1e-6, Yaw*r2d,'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -100 100]);
-    xlabel({'时间(s)'});
-    ylabel('偏航角(deg)')
-    legend('给定','响应');
+    xlabel({'Time (s)'});
+    ylabel('Yaw (deg)')
+    legend('Setpoint','Response');
     %% 
-    PlotToFileColorPDF(fig2,'results/RPY.png',15,20); % or 'RPY.png'
+    % PlotToFileColorPDF(fig2,'results/RPY.pdf',15,20);  
 end
 
 
@@ -279,53 +329,53 @@ if(isfield(log.data, 'vehicle_local_position_0') && isfield(log.data, 'vehicle_l
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    title('速度');
-    xlabel({'时间(s)'});
+    title('Velocity');
+    xlabel({'Time (s)'});
     ylabel('V_X(m/s)')
-    legend('给定','响应');
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
     plot((vehicle_local_position_setpoint(:,1))*1e-6, V_XYZ_setpoint(:,2),'k-','LineWidth',1);hold on;
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('V_Y(m/s)')
-    legend('给定','响应');
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
     plot((vehicle_local_position_setpoint(:,1))*1e-6, V_XYZ_setpoint(:,3),'k-','LineWidth',1);hold on;
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('V_Z(m/s)')
-    legend('给定','响应');
-    PlotToFileColorPDF(fig3,'results/V_XYZ.png',15,20);
+    legend('Setpoint','Response');
+    % PlotToFileColorPDF(fig3,'results/V_XYZ.pdf',15,20);
 elseif(isfield(log.data, 'vehicle_local_position_0'))
     fig3=figure(3);
     subplot(311)
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    title('速度');
-    xlabel({'时间(s)'});
+    title('Velocity');
+    xlabel({'Time (s)'});
     ylabel('V_X(m/s)')
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('V_Y(m/s)')
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
     plot((vehicle_local_position(:,1))*1e-6, V_XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('V_Z(m/s)')
-    PlotToFileColorPDF(fig3,'results/V_XYZ.png',15,20);
+    % PlotToFileColorPDF(fig3,'results/V_XYZ.pdf',15,20);
 end
 %% 
 
@@ -339,53 +389,53 @@ if(isfield(log.data, 'vehicle_local_position_0') && isfield(log.data, 'vehicle_l
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    title('位置');
-    xlabel({'时间(s)'});
+    title('Position');
+    xlabel({'Time (s)'});
     ylabel('X(m)')
-    legend('给定','响应');
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
     plot((vehicle_local_position_setpoint(:,1))*1e-6, XYZ_setpoint(:,2),'k-','LineWidth',1);hold on;
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('Y(m)')
-    legend('给定','响应');
+    legend('Setpoint','Response');
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
     plot((vehicle_local_position_setpoint(:,1))*1e-6, XYZ_setpoint(:,3),'k-','LineWidth',1);hold on;
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('Z(m)')
-    legend('给定','响应');
-    PlotToFileColorPDF(fig4,'results/P_XYZ.png',15,20);
+    legend('Setpoint','Response');
+    % PlotToFileColorPDF(fig4,'results/P_XYZ.pdf',15,20);
 elseif(isfield(log.data, 'vehicle_local_position_0'))
     fig4=figure(4);
     subplot(311)
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,1),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    title('位置');
-    xlabel({'时间(s)'});
+    title('Position');
+    xlabel({'Time (s)'});
     ylabel('X(m)')
     %% and maybe more figure, all in the variable "log.data"
     subplot(312)
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,2),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('Y(m)')
     %% and maybe more figure, all in the variable "log.data"
     subplot(313)
     plot((vehicle_local_position(:,1))*1e-6, XYZ(:,3),'--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([0 1200 -inf inf]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('Z(m)')
-    PlotToFileColorPDF(fig4,'results/P_XYZ.png',15,20);
+    % PlotToFileColorPDF(fig4,'results/P_XYZ.pdf',15,20);
 %%
 end
 %% 
@@ -403,99 +453,96 @@ if(isfield(log.data, 'actuator_controls_0_0'))
     plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1),'b-.','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf -0.5 0.5]);
-    title('控制器输出');
-    xlabel({'时间(s)'});
-    ylabel('控制量')
-    legend('滚转','俯仰',  '偏航');
+    title('Controller output');
+    xlabel({'Time (s)'});
+    ylabel('Value')
+    legend('Roll','Pitch',  'Yaw');
     subplot(412)
     plot((actuator_controls(:,1))*1e-6, Roll_control(:,1),'r-','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('滚转')
+    xlabel({'Time (s)'});
+    ylabel('Roll')
     subplot(413)
     plot((actuator_controls(:,1))*1e-6, Pitch_control(:,1),'k--','LineWidth',1,'color',[0.6,0.2,0]);hold on;
     grid on;
     % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('俯仰')
+    xlabel({'Time (s)'});
+    ylabel('Pitch')
     subplot(414)
     plot((actuator_controls(:,1))*1e-6, Yaw_control(:,1),'b-.','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('偏航')
-    %% 
-    PlotToFileColorPDF(fig5,'results/actuator_controls.png',15,20);
-
+    xlabel({'Time (s)'});
+    ylabel('Yaw')
+    % PlotToFileColorPDF(fig5,'results/actuator_controls.pdf',15,20);
 
 %% 
     if(ismember('indi_fb_0_', log.data.actuator_controls_0_0.Properties.VariableNames))
-    fig6=figure(6);
-    subplot(411)
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,1),'r-','LineWidth',1);hold on;
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,2),'k--','LineWidth',1);hold on;
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,3),'b-.','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    title('indi控制量');
-    xlabel({'时间(s)'});
-    ylabel('控制量')
-    legend('滚转','俯仰',  '偏航');
-    subplot(412)
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,1),'r-','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('滚转')
-    subplot(413)
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,2),'k--','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('俯仰')
-    subplot(414)
-    plot((actuator_controls(:,1))*1e-6, indi_feedback(:,3),'b-.','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('偏航')
-    % %% 
-    PlotToFileColorPDF(fig6,'results/indi_feedback.png',15,20);
-
-
-    fig7=figure(7);
-    subplot(411)
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,1),'r-','LineWidth',1);hold on;
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,2),'k--','LineWidth',1);hold on;
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,3),'b-.','LineWidth',1);hold on;
-
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    title('误差反馈控制量');
-    xlabel({'时间(s)'});
-    ylabel('控制量')
-    legend('滚转','俯仰',  '偏航');
-    subplot(412)
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,1),'r-','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('滚转')
-    subplot(413)
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,2),'k--','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('俯仰')
-    subplot(414)
-    plot((actuator_controls(:,1))*1e-6, error_feedback(:,3),'b-.','LineWidth',1);hold on;
-    grid on;
-    % axis([-inf inf -0.5 0.5]);
-    xlabel({'时间(s)'});
-    ylabel('偏航')
-    % %% 
-    PlotToFileColorPDF(fig7,'results/error_control_input.png',15,20);
+        fig6=figure(6);
+        subplot(411)
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,1),'r-','LineWidth',1);hold on;
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,2),'k--','LineWidth',1);hold on;
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,3),'b-.','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        title('Trim-control term');
+        xlabel({'Time (s)'});
+        ylabel('Value')
+        legend('Roll','Pitch','Yaw');
+        subplot(412)
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,1),'r-','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Roll')
+        subplot(413)
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,2),'k--','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Pitch')
+        subplot(414)
+        plot((actuator_controls(:,1))*1e-6, indi_feedback(:,3),'b-.','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Yaw')
+        
+        % PlotToFileColorPDF(fig6,'results/indi_feedback.pdf',15,20);
+    
+    %% 
+        fig7=figure(7);
+        subplot(411)
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,1),'r-','LineWidth',1);hold on;
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,2),'k--','LineWidth',1);hold on;
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,3),'b-.','LineWidth',1);hold on;
+    
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        title('Error-feedback term');
+        xlabel({'Time (s)'});
+        ylabel('Value')
+        legend('Roll','Pitch','Yaw');
+        subplot(412)
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,1),'r-','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Roll')
+        subplot(413)
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,2),'k--','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Pitch')
+        subplot(414)
+        plot((actuator_controls(:,1))*1e-6, error_feedback(:,3),'b-.','LineWidth',1);hold on;
+        grid on;
+        % axis([-inf inf -0.5 0.5]);
+        xlabel({'Time (s)'});
+        ylabel('Yaw') 
+        % PlotToFileColorPDF(fig7,'results/error_control_input.pdf',15,20);
     end
 
 end
@@ -514,36 +561,36 @@ if(isfield(log.data, 'actuator_outputs_0'))
     plot((actuator_outputs(:,1))*1e-6, cs4(:,1),'g-','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf 1000 2000]);
-    title('操作面指令');
-    xlabel({'时间(s)'});
-    ylabel('偏转指令(pwm)')
-    legend('操作面1','操作面2','操作面3','操作面4');
+    title('Control surface');
+    xlabel({'Time (s)'});
+    ylabel('Value (pwm)')
+    legend('cs1','cs2','cs3','cs4');
     subplot(512)
     plot((actuator_outputs(:,1))*1e-6, cs1(:,1),'r-','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf 1000 2000]);
-    xlabel({'时间(s)'});
-    ylabel('操作面1')
+    xlabel({'Time (s)'});
+    ylabel('cs1')
     subplot(513)
     plot((actuator_outputs(:,1))*1e-6, cs2(:,1),'k--','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf 1000 2000]);
-    xlabel({'时间(s)'});
-    ylabel('操作面2')
+    xlabel({'Time (s)'});
+    ylabel('cs2')
     subplot(514)
     plot((actuator_outputs(:,1))*1e-6, cs3(:,1),'b-.','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf 1000 2000]);
-    xlabel({'时间(s)'});
-    ylabel('操作面3')
+    xlabel({'Time (s)'});
+    ylabel('cs3')
     subplot(515)
     plot((actuator_outputs(:,1))*1e-6, cs4(:,1),'g-','LineWidth',1);hold on;
     grid on;
     % axis([-inf inf 1000 2000]);
-    xlabel({'时间(s)'});
-    ylabel('操作面4')
+    xlabel({'Time (s)'});
+    ylabel('cs4')
     %% 
-    PlotToFileColorPDF(fig8,'results/cs.png',15,20);
+    % PlotToFileColorPDF(fig8,'results/cs.pdf',15,20);
 end
 
 
@@ -551,80 +598,23 @@ end
 
 %%
 if(isfield(log.data, 'vehicle_local_position_0') && isfield(log.data, 'vehicle_local_position_setpoint_0'))
-
-    % 创建图形窗口
     fig9=figure(9);
-
-    % 绘制第一条轨迹
     plot3(XYZ_setpoint(:,1), XYZ_setpoint(:,2), -XYZ_setpoint(:,3), 'LineStyle', '-', 'LineWidth', 1);
     hold on;
-    % 绘制第二条轨迹
     plot3(XYZ(:,1), XYZ(:,2), -XYZ(:,3), 'LineStyle', ':', 'LineWidth', 1);
 
-    % 设置标题和轴标签
-    title('轨迹跟踪');
+    title('Trajectory');
     xlabel('X(m)');
     ylabel('Y(m)');
     zlabel('Z(m)');
-    % axis([-7 7 -7 7 -0.5 5]);% indoor
-    % 设置图例
-    legend1=legend('给定轨迹', '位置响应');
-    set(legend1,...
-        'Position',[0.154729910714286 0.304791666666668 0.146450892857143 0.0916071428571428]);
-    % 设置网格
+    legend1=legend('Setpoint', 'Response');
     grid on;
-
-    % 设置视角
     view(45, 30);
     hold off;
-    PlotToFileColorPDF(fig9,'results/trj.png',20,20);
+    % PlotToFileColorPDF(fig9,'results/trj.pdf',20,20);
 end
 
-
-
-%% 
-if(isfield(log.data, 'vehicle_angular_velocity_0'))
-    figure(10);
-    plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle angular velocity');
-    disp('mean(rate_delta_t)');
-    mean(rate_delta_t)
-end
-if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
-    figure(11);
-    plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle attitude setpoint');
-    disp('mean(attitude_delta_t)');
-    mean(attitude_delta_t)
-
-end
-if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
-    figure(12);
-    plot(1:pose_N-1, pose_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('vehicle local position setpoint');
-    disp('mean(pose_delta_t)');
-    mean(pose_delta_t)
-end
-if(isfield(log.data, 'actuator_controls_0_0'))
-    figure(13);
-    plot(1:actuator_N-1, actuator_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('actuator controls');
-    disp('mean(actuator_delta_t)');
-    mean(actuator_delta_t)
-end 
-if(isfield(log.data, 'actuator_outputs_0'))
-    figure(14);
-    plot(1:cs_N-1, cs_delta_t,'k-','LineWidth',1);hold on;
-    ylabel('time (s)');
-    title('actuator outputs');
-    disp('mean(cs_delta_t)');
-    mean(cs_delta_t)
-end
-
+%%
 if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     fig15=figure(15);
     subplot(311)
@@ -632,8 +622,8 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,3),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([-inf inf -20 20]);
-    title('角加速度');
-    xlabel({'时间(s)'});
+    title('Angular Acceleration');
+    xlabel({'Time (s)'});
     ylabel('p(rad/s^2)')
     legend('angular acc','gyro');
     %% and maybe more figure, all in the variable "log.data"
@@ -642,7 +632,7 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,4),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([-inf inf -20 20]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('q(rad/s^2)')
     legend('angular acc','gyro');
     %% and maybe more figure, all in the variable "log.data"
@@ -651,10 +641,10 @@ if(isfield(log.data, 'vehicle_angular_acceleration_0'))
     plot((vehicle_angular_velocity(:,1))*1e-6, vehicle_angular_velocity(:,5),'--','LineWidth',1,'color',[0.6,0.2,0,0.5]);hold on;
     grid on;
     % axis([-inf inf -20 20]);
-    xlabel({'时间(s)'});
+    xlabel({'Time (s)'});
     ylabel('r(rad/s^2)')
     legend('angular acc','gyro');
-    PlotToFileColorPDF(fig15,'results/vehicle_angular_acceleration.png',15,20);
+    % PlotToFileColorPDF(fig10,'results/vehicle_angular_acceleration.pdf',15,20);
 
 end
 
@@ -662,33 +652,148 @@ if(isfield(log.data, 'vehicle_visual_odometry_0') && isfield(log.data, 'vehicle_
     fig16=figure(16);
     plot((vehicle_visual_odometry(:,1))*1e-6, visual_odometry_q0,'k-','LineWidth',1);hold on;
     plot((vehicle_attitude(:,1))*1e-6, q_0,'r-','LineWidth',1);hold on;grid on;
-    % 采样频率不一样，只能粗略估计
-    %计算时延方法1
-    % % 使用 finddelay 函数
+    % The sampling frequencies are different, so only a rough estimation can be made
+    % Method 1 for calculating time delay
+    % % Use the finddelay function
     % timeDelay = finddelay(q_0, visual_odometry_q0);
-    % % 显示结果
+    % % Display result
     % disp(['The time delay between the signals is ', num2str(timeDelay), ' samples.']);
-    %计算时延方法2
-    % % 计算互相关
+
+    % Method 2 for calculating time delay
+    % % Compute cross-correlation
     % [c, lags] = xcorr(visual_odometry_q0, q_0);
     % 
-    % % 找到最大相关性的位置
+    % % Find the position of maximum correlation
     % [~, I] = max(c);
     % timeDelay = lags(I);
     % 
-    % % 显示结果
+    % % Display result
     % disp(['The time delay between the signals is ', num2str(timeDelay), ' samples.']);
-    %计算时延方法3
+
+    % Method 3 for calculating time delay
     % X_q_0 = fft(q_0);
     % Y_visual_odometry_q0 = fft(visual_odometry_q0);
-    % % 计算相位差
+    % % Compute phase difference
     % dPhi = angle(Y_visual_odometry_q0 ./ X_q_0);
-    % % 计算时延
+    % % Compute time delay
     % frequencies = (0:length(t)-1) * (fs/length(t));
     % timeDelay = mean(dPhi ./ (2 * pi * frequencies));
     % 
-    % % 显示结果
+    % % Display result
     % disp(['The estimated time delay between the signals is ', num2str(timeDelay), ' seconds.']);
 
 end
 
+
+if(isfield(log.data, 'allocation_value_0') && isfield(log.data, 'actuator_outputs_0'))
+    figure,
+    subplot(211)
+    plot((allocation_value(:,1))*1e-6, allocation_value(:,12),'r-','LineWidth',1);hold on;
+    plot((allocation_value(:,1))*1e-6, allocation_value(:,13),'k--','LineWidth',1);hold on;
+    plot((allocation_value(:,1))*1e-6, allocation_value(:,14),'b-.','LineWidth',1);hold on;
+    plot((allocation_value(:,1))*1e-6, allocation_value(:,15),'g-','LineWidth',1);hold on;
+if(isfield(log.data, 'input_rc_0'))
+    plot((input_rc(:,1))*1e-6, (input_rc(:,15)-1094)/420,'k-','LineWidth',1);hold on;
+end
+    
+    title('Allocator output');
+    xlabel({'Time (s)'});
+    ylabel('u')
+    legend('cs1','cs2','cs3','cs4');
+
+    subplot(212)
+    plot((actuator_outputs(:,1))*1e-6, cs1(:,1),'r-','LineWidth',1);hold on;
+    plot((actuator_outputs(:,1))*1e-6, cs2(:,1),'k--','LineWidth',1);hold on;
+    plot((actuator_outputs(:,1))*1e-6, cs3(:,1),'b-.','LineWidth',1);hold on;
+    plot((actuator_outputs(:,1))*1e-6, cs4(:,1),'g-','LineWidth',1);hold on;
+    grid on;
+    % axis([-inf inf 1000 2000]);
+    title('cs command');
+    xlabel({'Time (s)'});
+    ylabel('偏转指令(pwm)')
+    legend('cs1','cs2','cs3','cs4');
+    
+end
+if ismember('rate_control_running_time', log.data.actuator_controls_0_0.Properties.VariableNames)
+    disp('INDI running time (us)');
+    mean(actuator_controls(actuator_controls(:,19)==1,18))
+    disp('PID running time (us)');
+    mean(actuator_controls(actuator_controls(:,19)==0,18))
+end
+
+
+%%
+if(isfield(log.data, 'vehicle_angular_velocity_0'))
+    figure,
+    plot(1:rate_N-1, rate_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle angular velocity');
+    disp('mean(rate_delta_t)');
+    mean(rate_delta_t)/rate_dowm_simple
+end
+if(isfield(log.data, 'vehicle_rates_setpoint_0'))
+    figure,
+    plot(1:rate_setpoint_N-1, rate_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle rate setpoint');
+    disp('mean(rate_setpoint_delta_t)');
+    mean(rate_setpoint_delta_t)/att_dowm_simple
+end
+if(isfield(log.data, 'vehicle_angular_acceleration_0'))
+    figure,
+    plot(1:rate_acc_N-1, rate_acc_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle angular acceleration');
+    disp('mean(rate_acc_delta_t)');
+    mean(rate_acc_delta_t)
+end
+if(isfield(log.data, 'vehicle_attitude_0'))
+    figure,
+    plot(1:attitude_N-1, attitude_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle attitude');
+    disp('mean(attitude_delta_t)');
+    mean(attitude_delta_t)/att_dowm_simple
+
+end
+if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
+    figure,
+    plot(1:attitude_setpoint_N-1, attitude_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle attitude setpoint');
+    disp('mean(attitude_setpoint_delta_t)');
+    mean(attitude_setpoint_delta_t)/att_set_dowm_simple
+
+end
+if(isfield(log.data, 'vehicle_local_position_0'))
+    figure,
+    plot(1:pose_N-1, pose_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle local position');
+    disp('mean(pose_delta_t)');
+    mean(pose_delta_t)
+end
+if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
+    figure,
+    plot(1:pose_setpoint_N-1, pose_setpoint_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('vehicle local position setpoint');
+    disp('mean(pose_setpoint_delta_t)');
+    mean(pose_setpoint_delta_t)
+end
+if(isfield(log.data, 'actuator_controls_0_0'))
+    figure,
+    plot(1:actuator_N-1, actuator_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('actuator controls');
+    disp('mean(actuator_delta_t)');
+    mean(actuator_delta_t)/rate_dowm_simple
+end 
+if(isfield(log.data, 'actuator_outputs_0'))
+    figure,
+    plot(1:cs_N-1, cs_delta_t,'k-','LineWidth',1);hold on;
+    ylabel('time (s)');
+    title('actuator outputs');
+    disp('mean(cs_delta_t)');
+    mean(cs_delta_t)/rate_dowm_simple
+end
