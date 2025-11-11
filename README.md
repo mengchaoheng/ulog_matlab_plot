@@ -1,23 +1,63 @@
-This is a tiny plot tool of matlab for ulog form PX4, which inspired by [matulog](https://github.com/CarlOlsson/matulog). You need to plot what you want by your shelf.
+# About
 
-it have been test on MacOS Monterey 12.3 and win10, matlab 2021b.
+This is a tiny MATLAB plotting tool for PX4 ULog data, inspired by [matulog](https://github.com/CarlOlsson/matulog).
+It allows you to customize and visualize the signals you are interested in.
 
-Requirements:
+The tool has been tested on macOS and Windows 10, using MATLAB.
 
-1.matlab2016a (or a newer version)
+⸻
 
-2.python.
+# Requirements
+1. MATLAB
+2. Python (installed and accessible from the system PATH)
+3. pyulog — required for running ulog_matlab_plot
 
-3.pyulog is needed for `ulog_matlab_plot` to run, install the latter using ```pip install pyulog``` or ```pip3 install pyulog``` on MacOS or windows or any other.
-
-(On Mac, it maybe have been installed by the "brew install px4-dev", when you set up a PX4 development environment for macOS. you have to find the path of ulog2csv by "which ulog2csv")
-
-To run:
-- Clone or download the repo
-
-- In Matlab run plot_setpoint_response.m after setup the path and file name
+You can install pyulog via:
 
 ```
-WARNING: The scripts ulog2csv, ulog2kml, ulog2rosbag, ulog_extract_gps_dump, ulog_info, ulog_messages, ulog_migratedb and ulog_params are installed in '/Users/mch/Library/Python/3.8/bin' which is not on PATH.
-  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+pip install pyulog
 ```
+
+or
+
+```
+pip3 install pyulog
+```
+
+On macOS, pyulog may already be installed if you have previously set up the PX4 development environment using
+
+```
+brew install px4-dev
+```
+
+In that case, you can locate the ulog2csv tool with:
+
+```
+which ulog2csv
+```
+
+
+
+# Usage
+1. Clone or download this repository.
+2. Copy your `.ulg` files to `/data`
+3. In MATLAB, configure the file path and file name, then run:
+
+```
+plot_setpoint_response.m
+```
+
+
+
+# Notes
+
+If you see the following warning when installing or running pyulog, it means the installation path is not on your system PATH variable:
+
+WARNING: The scripts ulog2csv, ulog2kml, ulog2rosbag, ulog_extract_gps_dump, 
+ulog_info, ulog_messages, ulog_migratedb, and ulog_params are installed in 
+'/Users/mch/Library/Python/3.8/bin' which is not on PATH.
+Consider adding this directory to PATH or, if you prefer to suppress this warning,
+use --no-warn-script-location.
+
+Simply add the shown directory to your PATH or ignore the warning if you prefer.
+
