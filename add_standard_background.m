@@ -2,6 +2,7 @@ function add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_
     ax = gca;
 
     % 1. 当前坐标范围
+    axis(ax, 'tight');
     yl = ylim(ax);
     y_h = yl(2) - yl(1);
 
@@ -9,7 +10,7 @@ function add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_
     draw_status_band(vis_flight_intervals, vis_flight_names, yl, 'flight_mode');
 
     if vis_is_vtol
-        y_band_top = yl(1) + 0.1 * y_h;
+        y_band_top = yl(1) + 0.18 * y_h;
         draw_status_band(vis_vtol_intervals, vis_vtol_names, [yl(1), y_band_top], 'vtol_state');
     end
 

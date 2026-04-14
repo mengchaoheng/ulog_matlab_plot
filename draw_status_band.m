@@ -77,8 +77,8 @@ function draw_status_band(intervals, labels, y_range, color_mode)
             text(t_s + (t_e-t_s)/2, text_y, labels{i}, ... 
                 'HorizontalAlignment', 'center', ...
                 'VerticalAlignment', text_valign, ...      
-                'FontSize', 7, 'FontName', 'Times New Roman', ... %  
-                'Color', [0.3 0.3 0.3], ... %  
+                'FontSize', 6, 'FontName', 'Times New Roman', ... %  
+                'Color', [0.2 0.2 0.2], ... %  
                 'Interpreter', 'none', 'Clipping', 'on');
         end
     end

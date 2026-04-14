@@ -9,7 +9,7 @@ addpath(genpath(pwd));
 %  Global figure / font style
 % =========================================================================
 set(groot, ...
-    'defaultAxesFontSize', 9, ...
+    'defaultAxesFontSize', 7, ...
     'defaultAxesFontName', 'Times New Roman', ...
     'defaultAxesLineWidth', 0.5, ...
     'defaultAxesLabelFontSizeMultiplier', 1, ...
@@ -39,70 +39,50 @@ control_fig = 0;     % 1: Display control quantities
 n_raw_plot = 8;      % For versions before 1.13, plot first 8 channels of pwm
 
 %% =========================================================================
-%  Figure 1 2, 3, 4, 5
+%  Figure 1 2, 3, 4, 5: (vehicle_angular_velocity, Attitude, Vel, Pos, Control)
 % =========================================================================
-
 % --- Figure 1: vehicle_angular_velocity ---
-if exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var')
+if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var'))
     figure('Name', 'Rates', 'Color', 'w');
+    % titles = {'Roll Rate', 'Pitch Rate', 'Yaw Rate'};
     ylabels = {'p (deg/s)', 'q (deg/s)', 'r (deg/s)'};
-    ax = gobjects(1,3);
-
+    ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;
-
-        step = 20;
-        plot(vehicle_rates_setpoint_t(1:step:end), ...
-             vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});
-
-        step = 1;
-        plot(vehicle_angular_velocity_t(1:step:end), ...
-             vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
-
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
-        if i == 1
-            legend('Setpoint', 'Response', 'Location', 'best');
-        end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        ax(i) = subplot(3,1,i); hold on;step = 20;
+        plot(vehicle_rates_setpoint_t(1:step:end), vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});step = 1;
+        plot(vehicle_angular_velocity_t(1:step:end), vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
+        grid on; ylabel(ylabels{i}); xlabel('Time (s)');% title(titles{i});
+        if i==1, legend('Setpoint', 'Response', 'Location', 'best'); end
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        % lines = findobj(gca, 'Type', 'line');
+        % uistack(lines, 'top');
+        
     end
-    linkaxes(ax, 'x');
-    PlotToFile(gcf, 'results/rates.png', 20, 20);
+    linkaxes(ax, 'x'); 
+    PlotToFile(gcf, 'results/rates.pdf', 12, 6.8);
 end
 
 % --- Figure 2: Attitude ---
-if exist('Roll', 'var') && exist('Roll_setpoint', 'var')
-    figure('Name', 'Attitude', 'Color', 'w');
-
-    step = 10;
-    d_sp  = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};
-    step = 1;
+if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
+    figure('Name', 'Attitude', 'Color', 'w');step = 10;
+    d_sp = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};step = 1;
     d_res = {Roll(1:step:end), Pitch(1:step:end), Yaw(1:step:end)};
+    % titles = {'Roll', 'Pitch', 'Yaw'};
 
+    % \varphi corresponds to Roll, \theta corresponds to Pitch, \phi corresponds to Yaw
     ylabels = {'$\varphi$ (deg)', '$\theta$ (deg)', '$\phi$ (deg)'};
-    ax = gobjects(1,3);
 
+    ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;
-
-        step = 10;
-        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});
-        step = 1;
+        ax(i) = subplot(3,1,i); hold on;step = 10;
+        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});step = 1;
         plot(vehicle_attitude_t(1:step:end), d_res{i}*r2d, STYLE_RES{:});
-
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
-        if i == 1
-            legend('Setpoint', 'Response', 'Location', 'best');
-        end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        grid on; ylabel(ylabels{i}); xlabel('Time (s)'); %title(titles{i}); 
+        if i==1, legend('Setpoint','Response','Location', 'best'); end
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x'); 
-    % PlotToFile(gcf, 'results/att.pdf', 12, 6.8);
+    PlotToFile(gcf, 'results/att.pdf', 12, 6.8);
 end
 
 % --- Figure 3: Velocity ---
@@ -113,8 +93,8 @@ end
 %     ax = [];
 %     for i = 1:3
 %         ax(i) = subplot(3,1,i); hold on;
-%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), 'k-', 'LineWidth', 1); end
-%         plot(vehicle_local_position_t, V_XYZ(:,i), '--', 'LineWidth', 1, 'Color', [0.6, 0.2, 0]);
+%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), STYLE_SP{:}); end
+%         plot(vehicle_local_position_t, V_XYZ(:,i), STYLE_RES{:});
 %         grid on; ylabel(ylabels{i}); if i==1, title('Velocity'); legend('Setpoint','Response'); end
 %         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 %     end
@@ -123,99 +103,87 @@ end
 
 % --- Figure 3: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
 if exist('V_XYZ', 'var')
-    figure('Name', 'Velocity', 'Color', 'w');
+    figure('Name', 'Velocity', 'Color', 'w');  
 
+    % 1. Determine if 4th subplot is needed
     has_tecs = exist('tecs_h_rate', 'var');
     if has_tecs
-        n_rows = 4;
+        n_rows = 4; % Has TECS -> 4 rows
     else
-        n_rows = 3;
+        n_rows = 3; % No TECS -> 3 rows
     end
 
-    ax = gobjects(1, n_rows);
+    ax = [];
 
-    ax(1) = subplot(n_rows,1,1); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:});
-    end
+    % --- Subplot 1: Velocity X ---
+    ax(1) = subplot(n_rows, 1, 1); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,1), STYLE_RES{:});
-    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)');
-    if exist('V_XYZ_setpoint', 'var')
-        legend('Setpoint', 'Response', 'Location', 'best');
-    end
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)'); %title('Velocity X');
+    if exist('V_XYZ_setpoint', 'var'), legend('Setpoint', 'Response', 'Location', 'best'); end
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    ax(2) = subplot(n_rows,1,2); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:});
-    end
+    % --- Subplot 2: Velocity Y ---
+    ax(2) = subplot(n_rows, 1, 2); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,2), STYLE_RES{:});
-    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)');
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)'); %title('Velocity Y');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    ax(3) = subplot(n_rows,1,3); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:});
-    end
+    % --- Subplot 3: Velocity Z ---
+    ax(3) = subplot(n_rows, 1, 3); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,3), STYLE_RES{:});
-    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)');
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)'); %title('Velocity Z');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
+    % --- Subplot 4: TECS Height Rate (Only plotted if exists) ---
     if has_tecs
-        ax(4) = subplot(n_rows,1,4); hold on;
+        ax(4) = subplot(n_rows, 1, 4); hold on;
         plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate_sp, STYLE_SP{:});
         plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate, STYLE_RES{:});
-        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)'); %title('TECS Height Rate');
+        % legend('$\dot{h}_r$', '$\dot{h}$', 'Location', 'best');
+        % legend('Setpoint', 'Response', 'Location', 'best');
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
 
     linkaxes(ax, 'x');  
-    % PlotToFile(gcf, 'results/vel.pdf', 12, 9.5);
+    PlotToFile(gcf, 'results/vel.pdf', 12, 9.5);
 end
 
 % --- Figure 4: Position ---
-if exist('XYZ', 'var')
-    figure('Name', 'Position', 'Color', 'w');
+if(exist('XYZ', 'var'))
+    figure('Name', 'Position', 'Color', 'w'); 
     ylabels = {'x (m)', 'y (m)', 'z (m)'};
     has_sp = exist('XYZ_setpoint', 'var');
-    ax = gobjects(1,3);
-
+    ax = [];
     for i = 1:3
         ax(i) = subplot(3,1,i); hold on;
-        if has_sp
-            plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:});
-        end
+        if has_sp, plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:}); end
         plot(vehicle_local_position_t, XYZ(:,i), STYLE_RES{:});
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
-        if i == 1
-            legend('Setpoint', 'Response', 'Location', 'best');
+        grid on; ylabel(ylabels{i}); xlabel('Time (s)');
+        if i==1
+            % title('Position'); 
+            legend('Setpoint','Response','Location', 'best'); 
         end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x'); 
-    % PlotToFile(gcf, 'results/pos.pdf', 12, 6.8);
+    PlotToFile(gcf, 'results/pos.pdf', 12, 6.8);
 end
 
 %% =========================================================================
-%  Trajectory
+%  Trajectory  
 % =========================================================================
-if exist('XYZ', 'var') && exist('XYZ_setpoint', 'var')
+if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
     figure('Name', 'Trajectory', 'Color', 'w');
     step = 10;
-    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), ...
-        -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
+    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
     plot3(XYZ(:,1), XYZ(:,2), -XYZ(:,3), STYLE_RES{:});
-    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)');
-    grid on; view(45, 30);
-    legend('Setpoint', 'Response', 'Location', 'best');
-    % PlotToFile(gcf, 'results/traj.pdf', 8, 3.5);
+    % title('Trajectory'); 
+    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)'); grid on; view(45, 30);legend('Setpoint', 'Response', 'Location', [0.397851640472838 0.245923662405286 0.241278108465608 0.125550660792952]);
+    PlotToFile(gcf, 'results/traj.pdf', 8, 3.5);
 end
 
 %% =========================================================================
@@ -1186,11 +1154,11 @@ function sty = make_plot_style()
     sty.c_axis7 = [0.635, 0.078, 0.184];
 
     % -------- Line widths --------
-    sty.lw_sp = 0.9;
-    sty.lw_res = 1.1;
-    sty.lw_main = 1.0;
-    sty.lw_main_bold = 1.3;
-    sty.lw_thin = 0.6;
+    sty.lw_sp = 0.8;
+    sty.lw_res = 0.5;
+    sty.lw_main = 0.8;
+    sty.lw_main_bold = 1;
+    sty.lw_thin = 0.5;
     sty.lw_multi = 0.9;
     sty.lw_multi_bold = 1.2;
 
