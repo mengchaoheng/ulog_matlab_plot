@@ -9,23 +9,35 @@ function draw_status_band(intervals, labels, y_range, color_mode)
     
     % --- Color Scheme ---
     colors = containers.Map('KeyType', 'double', 'ValueType', 'any');
-    default_c = [0.95, 0.95, 0.95];
+    default_c = [0.95, 0.95, 0.95]; 
     
     if strcmp(color_mode, 'flight_mode')
-        % Flight mode colors (soft background colors)
-        colors(0) = [0.90, 0.90, 0.90]; % Manual (Gray)
-        colors(1) = [0.85, 0.95, 1.0];  % Altitude
-        colors(2) = [0.80, 0.90, 1.0];  % Position (Light Blue)
-        colors(3) = [0.85, 1.0, 0.85];  % Mission (Light Green)
-        colors(4) = [0.90, 0.90, 0.80]; % Loiter
-        colors(5) = [1.0, 0.90, 0.90];  % RTL (Reddish)
-        colors(14)= [1.0, 0.95, 0.80];  % Offboard (Yellowish)
-        colors(15)= [0.80, 0.95, 1.0];  % Stabilized
+       % Flight mode colors (soft background colors)
+        colors(0)  = [0.88, 0.92, 0.98]; % Manual (= Stabilized)
+        colors(15) = [0.88, 0.92, 0.98]; % Stabilized
+        colors(1)  = [0.78, 0.98, 0.98]; % Altitude
+        colors(2)  = [0.78, 0.90, 1.00]; % Position
+        colors(10) = [0.90, 0.90, 0.80]; % Acro 
+        
+        colors(17) = [1.00, 0.96, 0.70]; % Takeoff 
+        colors(22) = [1.00, 0.96, 0.70]; % VTOL Takeoff
+        colors(18) = [0.78, 0.98, 0.82]; % Land 
+        colors(20) = [0.78, 0.98, 0.82]; % Precland
+        colors(5)  = [1.00, 0.88, 0.70]; % RTL
+        
+        colors(3)  = [0.88, 0.85, 1.00]; % Mission
+        colors(4)  = [0.92, 0.85, 0.92]; % Loiter
+        colors(14) = [0.98, 0.82, 0.98]; % Offboard
+        
+        alpha_val = 0.2; 
+        
     elseif strcmp(color_mode, 'vtol_state')
-        % VTOL state colors (more vivid, for bottom band)
-        colors(1) = [0.6, 0.8, 1.0];    % MC (Blue)
-        colors(2) = [0.6, 1.0, 0.6];    % FW (Green)
-        colors(3) = [1.0, 0.7, 0.4];    % Transition (Orange)
+       % VTOL state colors (more vivid, for bottom band)
+        colors(1) = [0.65, 0.75, 0.90]; % MC: 
+        colors(2) = [0.65, 0.85, 0.65]; % FW: 
+        colors(3) = [1.00, 0.80, 0.50]; % Transition: 
+        
+        alpha_val = 0.80; 
     end
     
     hold on;
@@ -43,26 +55,31 @@ function draw_status_band(intervals, labels, y_range, color_mode)
         text_y = y_b + (y_t - y_b) / 2;
         text_valign = 'middle'; % Vertical alignment: middle
     end
-    % === [Modification End] ===
 
     for i = 1:size(intervals, 1)
         t_s = intervals(i, 1);
         t_e = intervals(i, 2);
         val = intervals(i, 3);
         
-        if isKey(colors, val), c = colors(val); else, c = default_c; end
+        if isKey(colors, val)
+            c = colors(val); 
+        else
+            c = default_c; 
+        end
         
         % Draw rectangle
         p = patch([t_s t_e t_e t_s], [y_b y_b y_t y_t], c);
-        set(p, 'EdgeColor', 'none', 'FaceAlpha', 0.5, 'HandleVisibility', 'off');
+        set(p, 'EdgeColor', 'none', 'FaceAlpha', alpha_val, 'HandleVisibility', 'off');
         
         % Text label 
-        % Only display text when duration is long enough
+        % Only display text when duration is long enough (>2s)
         if (t_e - t_s) > 2.0
-            text(t_s + (t_e-t_s)/2, text_y, labels{i}, ... % Use calculated text_y
+            text(t_s + (t_e-t_s)/2, text_y, labels{i}, ... 
                 'HorizontalAlignment', 'center', ...
-                'VerticalAlignment', text_valign, ...      % Use calculated alignment
-                'FontSize', 8, 'Color', [0.2 0.2 0.2], 'Interpreter', 'none', 'Clipping', 'on');
+                'VerticalAlignment', text_valign, ...      
+                'FontSize', 7, 'FontName', 'Times New Roman', ... %  
+                'Color', [0.3 0.3 0.3], ... %  
+                'Interpreter', 'none', 'Clipping', 'on');
         end
     end
     % Ensure grid and curves are on top layer

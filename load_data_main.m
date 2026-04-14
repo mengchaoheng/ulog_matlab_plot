@@ -1,6 +1,6 @@
-clear all;
-close all;
-clc;
+% clear all;
+% close all;
+% clc;
 addpath(genpath(pwd));
 %% This file is mainly used to load data and perform conversion processing, such as compatibility between old and new versions, VTOL coordinate system conversion, etc.
 
