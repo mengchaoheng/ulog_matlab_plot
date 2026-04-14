@@ -3,85 +3,103 @@ close all;
 clc;
 
 run('load_data_main.m'); % load('flight_data.mat'); 20_00_18
-
 addpath(genpath(pwd));
 
+%% =========================================================================
+%  Global figure / font style
+% =========================================================================
 set(groot, ...
     'defaultAxesFontSize', 9, ...
     'defaultAxesFontName', 'Times New Roman', ...
     'defaultAxesLineWidth', 0.5, ...
     'defaultAxesLabelFontSizeMultiplier', 1, ...
     'defaultAxesTitleFontSizeMultiplier', 1);
-% 全局开启 LaTeX 渲染器
+
 set(0, 'DefaultTextInterpreter', 'latex');
 set(0, 'DefaultLegendInterpreter', 'latex');
 set(0, 'DefaultAxesTickLabelInterpreter', 'latex');
-% ====================================================================
-% 前景色样式宏 (Foreground Styles)
-% ====================================================================
-COLOR_SP  = [0.1, 0.1, 0.1];    
-COLOR_RES = [0.70, 0.22, 0.40];    
-% 推荐规范：Setpoint用虚线(或细实线)，Response用粗实线
-STYLE_SP  = {'Color', COLOR_SP, 'LineStyle', '--', 'LineWidth', 0.8}; % 期望线：虚线
-STYLE_RES = {'Color', COLOR_RES, 'LineStyle', '-', 'LineWidth', 0.5}; % 响应线：实线加粗
 
-% 如果你有多条响应线需要对比（比如xyz三轴），可以备用一个蓝色和绿色
-COLOR_RES2 = [0, 0.447, 0.741];   % 学术蓝
-COLOR_RES3 = [0, 0.620, 0.451];   % 翡翠青
+%% =========================================================================
+%  Unified style manager
+% =========================================================================
+sty = make_plot_style();
 
+% 为兼容你原先 Figure 1-5 的写法，保留这两个名字
+STYLE_SP  = sty.setpoint;
+STYLE_RES = sty.response;
 
-
-
-
-% Parameter settings
+%% =========================================================================
+%  Parameter settings
+% =========================================================================
 MAX_MOTORS = 12; 
 MAX_SERVOS = 8;  
-plot_together = 0; % 1: Servos and motors combined display, 0: Servos and motors independent display
-verbose = 0;  % 1: Display more, such as fft, time-frequency diagram, 0: Only display main states
-control_fig =0; % 1: Display control quantities, 0: Only display main states
-n_raw_plot = 8; % For versions before 1.13, plot first 8 channels of pwm
+plot_together = 0;   % 1: Servos and motors combined display, 0: independent display
+verbose = 0;         % 1: Display more diagnostics
+control_fig = 0;     % 1: Display control quantities
+n_raw_plot = 8;      % For versions before 1.13, plot first 8 channels of pwm
+
 %% =========================================================================
-%  Figure 1 2, 3, 4, 5: (vehicle_angular_velocity, Attitude, Vel, Pos, Control)
+%  Figure 1 2, 3, 4, 5
 % =========================================================================
+
 % --- Figure 1: vehicle_angular_velocity ---
-if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var'))
+if exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var')
     figure('Name', 'Rates', 'Color', 'w');
-    % titles = {'Roll Rate', 'Pitch Rate', 'Yaw Rate'};
     ylabels = {'p (deg/s)', 'q (deg/s)', 'r (deg/s)'};
-    ax = [];
+    ax = gobjects(1,3);
+
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;step = 20;
-        plot(vehicle_rates_setpoint_t(1:step:end), vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});step = 1;
-        plot(vehicle_angular_velocity_t(1:step:end), vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)');% title(titles{i});
-        if i==1, legend('Setpoint', 'Response', 'Location', 'best'); end
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-        % lines = findobj(gca, 'Type', 'line');
-        % uistack(lines, 'top');
-        
+        ax(i) = subplot(3,1,i); hold on;
+
+        step = 20;
+        plot(vehicle_rates_setpoint_t(1:step:end), ...
+             vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});
+
+        step = 1;
+        plot(vehicle_angular_velocity_t(1:step:end), ...
+             vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
+
+        grid on;
+        ylabel(ylabels{i});
+        xlabel('Time (s)');
+        if i == 1
+            legend('Setpoint', 'Response', 'Location', 'best');
+        end
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
-    linkaxes(ax, 'x'); 
-    % PlotToFile(gcf, 'results/rates.pdf', 12, 6.8);
+    linkaxes(ax, 'x');
+    PlotToFile(gcf, 'results/rates.png', 20, 20);
 end
 
 % --- Figure 2: Attitude ---
-if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
-    figure('Name', 'Attitude', 'Color', 'w');step = 10;
-    d_sp = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};step = 1;
+if exist('Roll', 'var') && exist('Roll_setpoint', 'var')
+    figure('Name', 'Attitude', 'Color', 'w');
+
+    step = 10;
+    d_sp  = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};
+    step = 1;
     d_res = {Roll(1:step:end), Pitch(1:step:end), Yaw(1:step:end)};
-    % titles = {'Roll', 'Pitch', 'Yaw'};
 
-    % \varphi corresponds to Roll, \theta corresponds to Pitch, \phi corresponds to Yaw
     ylabels = {'$\varphi$ (deg)', '$\theta$ (deg)', '$\phi$ (deg)'};
+    ax = gobjects(1,3);
 
-    ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;step = 10;
-        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});step = 1;
+        ax(i) = subplot(3,1,i); hold on;
+
+        step = 10;
+        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});
+        step = 1;
         plot(vehicle_attitude_t(1:step:end), d_res{i}*r2d, STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)'); %title(titles{i}); 
-        if i==1, legend('Setpoint','Response','Location', 'best'); end
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        grid on;
+        ylabel(ylabels{i});
+        xlabel('Time (s)');
+        if i == 1
+            legend('Setpoint', 'Response', 'Location', 'best');
+        end
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x'); 
     % PlotToFile(gcf, 'results/att.pdf', 12, 6.8);
@@ -95,8 +113,8 @@ end
 %     ax = [];
 %     for i = 1:3
 %         ax(i) = subplot(3,1,i); hold on;
-%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), STYLE_SP{:}); end
-%         plot(vehicle_local_position_t, V_XYZ(:,i), STYLE_RES{:});
+%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), 'k-', 'LineWidth', 1); end
+%         plot(vehicle_local_position_t, V_XYZ(:,i), '--', 'LineWidth', 1, 'Color', [0.6, 0.2, 0]);
 %         grid on; ylabel(ylabels{i}); if i==1, title('Velocity'); legend('Setpoint','Response'); end
 %         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 %     end
@@ -105,49 +123,54 @@ end
 
 % --- Figure 3: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
 if exist('V_XYZ', 'var')
-    figure('Name', 'Velocity', 'Color', 'w');  
+    figure('Name', 'Velocity', 'Color', 'w');
 
-    % 1. Determine if 4th subplot is needed
     has_tecs = exist('tecs_h_rate', 'var');
     if has_tecs
-        n_rows = 4; % Has TECS -> 4 rows
+        n_rows = 4;
     else
-        n_rows = 3; % No TECS -> 3 rows
+        n_rows = 3;
     end
 
-    ax = [];
+    ax = gobjects(1, n_rows);
 
-    % --- Subplot 1: Velocity X ---
-    ax(1) = subplot(n_rows, 1, 1); hold on;
-    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:}); end
+    ax(1) = subplot(n_rows,1,1); hold on;
+    if exist('V_XYZ_setpoint', 'var')
+        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:});
+    end
     plot(vehicle_local_position_t, V_XYZ(:,1), STYLE_RES{:});
-    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)'); %title('Velocity X');
-    if exist('V_XYZ_setpoint', 'var'), legend('Setpoint', 'Response', 'Location', 'best'); end
-    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)');
+    if exist('V_XYZ_setpoint', 'var')
+        legend('Setpoint', 'Response', 'Location', 'best');
+    end
+    add_standard_background(vis_flight_intervals, vis_flight_names, ...
+        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    % --- Subplot 2: Velocity Y ---
-    ax(2) = subplot(n_rows, 1, 2); hold on;
-    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:}); end
+    ax(2) = subplot(n_rows,1,2); hold on;
+    if exist('V_XYZ_setpoint', 'var')
+        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:});
+    end
     plot(vehicle_local_position_t, V_XYZ(:,2), STYLE_RES{:});
-    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)'); %title('Velocity Y');
-    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)');
+    add_standard_background(vis_flight_intervals, vis_flight_names, ...
+        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    % --- Subplot 3: Velocity Z ---
-    ax(3) = subplot(n_rows, 1, 3); hold on;
-    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:}); end
+    ax(3) = subplot(n_rows,1,3); hold on;
+    if exist('V_XYZ_setpoint', 'var')
+        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:});
+    end
     plot(vehicle_local_position_t, V_XYZ(:,3), STYLE_RES{:});
-    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)'); %title('Velocity Z');
-    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)');
+    add_standard_background(vis_flight_intervals, vis_flight_names, ...
+        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    % --- Subplot 4: TECS Height Rate (Only plotted if exists) ---
     if has_tecs
-        ax(4) = subplot(n_rows, 1, 4); hold on;
+        ax(4) = subplot(n_rows,1,4); hold on;
         plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate_sp, STYLE_SP{:});
         plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate, STYLE_RES{:});
-        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)'); %title('TECS Height Rate');
-        % legend('$\dot{h}_r$', '$\dot{h}$', 'Location', 'best');
-        % legend('Setpoint', 'Response', 'Location', 'best');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
 
     linkaxes(ax, 'x');  
@@ -155,320 +178,316 @@ if exist('V_XYZ', 'var')
 end
 
 % --- Figure 4: Position ---
-if(exist('XYZ', 'var'))
-    figure('Name', 'Position', 'Color', 'w'); 
+if exist('XYZ', 'var')
+    figure('Name', 'Position', 'Color', 'w');
     ylabels = {'x (m)', 'y (m)', 'z (m)'};
     has_sp = exist('XYZ_setpoint', 'var');
-    ax = [];
+    ax = gobjects(1,3);
+
     for i = 1:3
         ax(i) = subplot(3,1,i); hold on;
-        if has_sp, plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:}); end
-        plot(vehicle_local_position_t, XYZ(:,i), STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)');
-        if i==1
-            % title('Position'); 
-            legend('Setpoint','Response','Location', 'best'); 
+        if has_sp
+            plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:});
         end
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        plot(vehicle_local_position_t, XYZ(:,i), STYLE_RES{:});
+        grid on;
+        ylabel(ylabels{i});
+        xlabel('Time (s)');
+        if i == 1
+            legend('Setpoint', 'Response', 'Location', 'best');
+        end
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x'); 
     % PlotToFile(gcf, 'results/pos.pdf', 12, 6.8);
 end
 
 %% =========================================================================
-%  Trajectory  
+%  Trajectory
 % =========================================================================
-if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
+if exist('XYZ', 'var') && exist('XYZ_setpoint', 'var')
     figure('Name', 'Trajectory', 'Color', 'w');
     step = 10;
-    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
+    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), ...
+        -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
     plot3(XYZ(:,1), XYZ(:,2), -XYZ(:,3), STYLE_RES{:});
-    % title('Trajectory'); 
-    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)'); grid on; view(45, 30);legend('Setpoint', 'Response', 'Location', [0.397851640472838 0.245923662405286 0.241278108465608 0.125550660792952]);
+    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)');
+    grid on; view(45, 30);
+    legend('Setpoint', 'Response', 'Location', 'best');
     % PlotToFile(gcf, 'results/traj.pdf', 8, 3.5);
 end
 
-
+%% =========================================================================
+%  Control figures
+% =========================================================================
 if control_fig
-    %% =========================================================================
-    %  Actuator Controls (Two-column layout + independent time axes)
-    % =========================================================================
+    % ---------------------------------------------------------------------
+    % Actuator Controls
+    % ---------------------------------------------------------------------
     if ~isempty(actuator_controls_0.time)
-        figure('Name', 'Actuator Controls', 'Color', 'w');  
-    
-        % --- Layout strategy ---
+        figure('Name', 'Actuator Controls', 'Color', 'w');
+
         has_group1 = ~isempty(actuator_controls_1.time);
         if has_group1
-            n_cols = 2; layout_title = 'Actuator Controls (Left: Group 0, Right: Group 1)';
+            n_cols = 2;
+            layout_title = 'Actuator Controls (Left: Group 0, Right: Group 1)';
         else
-            n_cols = 1; layout_title = 'Actuator Controls (Group 0)';
+            n_cols = 1;
+            layout_title = 'Actuator Controls (Group 0)';
         end
-    
-        line_cols = {'r-', 'g-', 'b-'}; % Roll, Pitch, Yaw
+
+        line_cols = {sty.axis1, sty.axis2, sty.axis3};
         titles = {'All', 'Roll', 'Pitch', 'Yaw', 'Thrust'};
-        ax_all = []; 
-    
+        ax_all = [];
+
         for row = 1:5
-            % ======================= Left Side: Group 0 (Main) =======================
             idx_left = (row - 1) * n_cols + 1;
-            ax = subplot(5, n_cols, idx_left); 
-            ax_all = [ax_all, ax]; hold on;
-    
-            if row == 1 % Summary plot
-                plot(actuator_controls_0.time, actuator_controls_0.roll, line_cols{1}, 'DisplayName', 'Roll');
-                plot(actuator_controls_0.time, actuator_controls_0.pitch, line_cols{2}, 'DisplayName', 'Pitch');
-                plot(actuator_controls_0.time, actuator_controls_0.yaw, line_cols{3}, 'DisplayName', 'Yaw');
-    
-                % Thrust plotted using actuator_controls_0.time_thrust
+            ax = subplot(5, n_cols, idx_left); hold on;
+            ax_all = [ax_all, ax];
+
+            if row == 1
+                plot(actuator_controls_0.time, actuator_controls_0.roll,  line_cols{1}{:}, 'DisplayName', 'Roll');
+                plot(actuator_controls_0.time, actuator_controls_0.pitch, line_cols{2}{:}, 'DisplayName', 'Pitch');
+                plot(actuator_controls_0.time, actuator_controls_0.yaw,   line_cols{3}{:}, 'DisplayName', 'Yaw');
+
                 if ~isempty(actuator_controls_0.thrust_z_neg)
-                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, 'k-', 'DisplayName', 'Thrust (up)');
+                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, ...
+                        sty.thrust{:}, 'DisplayName', 'Thrust (up)');
                 end
                 if ~isempty(actuator_controls_0.thrust_x) && any(actuator_controls_0.thrust_x ~= 0)
-                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, 'k--', 'DisplayName', 'Thrust (fwd)');
+                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, ...
+                        sty.thrust_alt{:}, 'DisplayName', 'Thrust (fwd)');
                 end
-                title('Group 0 (Main)'); 
-                if n_cols == 1, legend('Location', 'best', 'NumColumns', 5); end
-    
-            elseif row >= 2 && row <= 4 % R, P, Y breakdown (using torque time actuator_controls_0.time)
+                title('Group 0 (Main)');
+                if n_cols == 1
+                    legend('Location', 'best', 'NumColumns', 5);
+                end
+
+            elseif row >= 2 && row <= 4
                 data_map = {actuator_controls_0.roll, actuator_controls_0.pitch, actuator_controls_0.yaw};
-                plot(actuator_controls_0.time, data_map{row-1}, line_cols{row-1});
+                plot(actuator_controls_0.time, data_map{row-1}, line_cols{row-1}{:});
                 ylabel(titles{row});
-    
-            elseif row == 5 % Thrust breakdown (using thrust time actuator_controls_0.time_thrust)
+
+            elseif row == 5
                 if ~isempty(actuator_controls_0.thrust_z_neg)
-                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, 'k-', 'DisplayName', 'Up');
+                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, ...
+                        sty.thrust{:}, 'DisplayName', 'Up');
                 end
                 if ~isempty(actuator_controls_0.thrust_x)
-                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, 'k--', 'DisplayName', 'Fwd');
+                    plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, ...
+                        sty.thrust_alt{:}, 'DisplayName', 'Fwd');
                 end
-                ylabel('Thrust'); legend('show', 'Location', 'best');
+                ylabel('Thrust');
+                legend('show', 'Location', 'best');
             end
             grid on;
-            add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    
-            % ======================= Right Side: Group 1 (Aux/FW) =======================
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
             if has_group1
                 idx_right = (row - 1) * n_cols + 2;
-                ax = subplot(5, n_cols, idx_right); 
-                ax_all = [ax_all, ax]; hold on;
-    
-                if row == 1 % Summary plot
-                    plot(actuator_controls_1.time, actuator_controls_1.roll, line_cols{1}, 'DisplayName', 'Roll');
-                    plot(actuator_controls_1.time, actuator_controls_1.pitch, line_cols{2}, 'DisplayName', 'Pitch');
-                    plot(actuator_controls_1.time, actuator_controls_1.yaw, line_cols{3}, 'DisplayName', 'Yaw');
+                ax = subplot(5, n_cols, idx_right); hold on;
+                ax_all = [ax_all, ax];
+
+                if row == 1
+                    plot(actuator_controls_1.time, actuator_controls_1.roll,  line_cols{1}{:}, 'DisplayName', 'Roll');
+                    plot(actuator_controls_1.time, actuator_controls_1.pitch, line_cols{2}{:}, 'DisplayName', 'Pitch');
+                    plot(actuator_controls_1.time, actuator_controls_1.yaw,   line_cols{3}{:}, 'DisplayName', 'Yaw');
                     if ~isempty(actuator_controls_1.thrust_x)
-                        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, 'k--', 'DisplayName', 'Thrust (fwd)');
+                        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
+                            sty.thrust_alt{:}, 'DisplayName', 'Thrust (fwd)');
                     end
                     title('Group 1 (Aux/FW)');
-    
+
                 elseif row >= 2 && row <= 4
                     data_map = {actuator_controls_1.roll, actuator_controls_1.pitch, actuator_controls_1.yaw};
-                    plot(actuator_controls_1.time, data_map{row-1}, line_cols{row-1});
-    
+                    plot(actuator_controls_1.time, data_map{row-1}, line_cols{row-1}{:});
+
                 elseif row == 5
                     if ~isempty(actuator_controls_1.thrust_x)
-                        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, 'k--', 'DisplayName', 'Fwd');
+                        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
+                            sty.thrust_alt{:}, 'DisplayName', 'Fwd');
                     end
                 end
                 grid on;
-                add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+                add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                    vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
             end
         end
-    
+
         linkaxes(ax_all, 'x');
         xlabel(ax_all(end), 'Time (s)');
         sgtitle(layout_title);
         % PlotToFile(gcf, 'results/control.png', 20, 20);
     end
-    
-    %% =========================================================================
-    %  Figure 6/7/8: Actuators & PWM 
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Figure 6/7/8: Actuators & PWM
+    % ---------------------------------------------------------------------
     if dynamic_control_alloc
-    
-        if (plot_together)
-            %% Dynamically plot motors and servos (Merged display version - optimized colors)
-            % Check if relevant data tables exist
-            if (isfield(log.data, 'actuator_motors_0') || isfield(log.data, 'actuator_servos_0'))
-    
-                % 1. Get motor and servo counts
+
+        if plot_together
+            if isfield(log.data, 'actuator_motors_0') || isfield(log.data, 'actuator_servos_0')
+
                 n_motors = 0;
                 if isfield(log, 'params') && isfield(log.params, 'CA_ROTOR_COUNT')
                     n_motors = double(log.params.CA_ROTOR_COUNT);
                 else
-                    if exist('motors', 'var'), n_motors = size(motors, 2); end
+                    if exist('motors', 'var')
+                        n_motors = size(motors, 2);
+                    end
                 end
-    
+
                 n_servos = 0;
                 if isfield(log, 'params') && isfield(log.params, 'CA_SV_CS_COUNT')
                     n_servos = double(log.params.CA_SV_CS_COUNT);
                 else
-                    if exist('servos', 'var'), n_servos = size(servos, 2); end
+                    if exist('servos', 'var')
+                        n_servos = size(servos, 2);
+                    end
                 end
-    
+
                 n_motors = min(n_motors, MAX_MOTORS);
                 n_servos = min(n_servos, MAX_SERVOS);
-    
+
                 has_motor_data = (n_motors > 0) && isfield(log.data, 'actuator_motors_0') && exist('motors', 'var');
                 has_servo_data = (n_servos > 0) && isfield(log.data, 'actuator_servos_0') && exist('servos', 'var');
-    
+
                 total_subplots = double(has_motor_data) + double(has_servo_data);
-    
+
                 if total_subplots > 0
                     figure('Name', 'Actuator Outputs (Merged)', 'Color', 'w');
                     current_plot_idx = 1;
-    
-                    % Part 1: Plot motors (all motors in one figure)
+
                     if has_motor_data
-                        ax_m = subplot(total_subplots, 1, current_plot_idx);
-                        hold on;
-                        colors_motor = hsv(n_motors); 
-                        t_m = log.data.actuator_motors_0.timestamp*1e-6;
+                        ax_m = subplot(total_subplots, 1, current_plot_idx); hold on;
+                        colors_motor = make_channel_colors(n_motors, sty);
+                        t_m = log.data.actuator_motors_0.timestamp * 1e-6;
                         for i = 1:n_motors
                             if i <= size(motors, 2)
-                                plot(t_m, motors(:, i), 'Color', colors_motor(i,:), 'LineWidth', 1, 'DisplayName', sprintf('Motor %d', i));
+                                plot(t_m, motors(:, i), 'Color', colors_motor(i,:), ...
+                                    'LineWidth', sty.lw_multi, ...
+                                    'DisplayName', sprintf('Motor %d', i));
                             end
                         end
-                        grid on; ylabel('Motors Output'); title(sprintf('Actuator: Motors (Total %d)', n_motors));
-                        legend('show'); 
-                        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    
-                        if has_servo_data, set(gca, 'XTickLabel', []); else, xlabel('Time (s)'); end
+                        grid on;
+                        ylabel('Motors Output');
+                        title(sprintf('Actuator: Motors (Total %d)', n_motors));
+                        legend('show');
+                        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+                        if has_servo_data
+                            set(gca, 'XTickLabel', []);
+                        else
+                            xlabel('Time (s)');
+                        end
                         current_plot_idx = current_plot_idx + 1;
                     end
-    
-                    % Part 2: Plot servos (all servos in one figure)
+
                     if has_servo_data
-                        ax_s = subplot(total_subplots, 1, current_plot_idx);
-                        hold on;
-                        if n_servos <= 7, colors_servo = lines(n_servos); else, colors_servo = hsv(n_servos); end
-                        t_s = log.data.actuator_servos_0.timestamp*1e-6;
+                        ax_s = subplot(total_subplots, 1, current_plot_idx); hold on;
+                        colors_servo = make_channel_colors(n_servos, sty);
+                        t_s = log.data.actuator_servos_0.timestamp * 1e-6;
                         for i = 1:n_servos
                             if i <= size(servos, 2)
-                                plot(t_s, servos(:, i), 'Color', colors_servo(i,:), 'LineWidth', 1, 'DisplayName', sprintf('Servo %d', i));
+                                plot(t_s, servos(:, i), 'Color', colors_servo(i,:), ...
+                                    'LineWidth', sty.lw_multi, ...
+                                    'DisplayName', sprintf('Servo %d', i));
                             end
                         end
-                        grid on; ylabel('Servos Output'); title(sprintf('Actuator: Servos (Total %d)', n_servos));
-                        legend('show'); xlabel('Time (s)');
-                        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+                        grid on;
+                        ylabel('Servos Output');
+                        title(sprintf('Actuator: Servos (Total %d)', n_servos));
+                        legend('show');
+                        xlabel('Time (s)');
+                        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
                     end
-    
-                    % Link axes if both exist
+
                     if has_motor_data && has_servo_data
                         linkaxes([ax_m, ax_s], 'x');
-                        % PlotToFile(gcf, 'results/motors_servos.png', 20, 20);
                     end
+                    % PlotToFile(gcf, 'results/motors_servos.png', 20, 20);
                 end
             end
+
         else
-            % Standalone display mode  
-            %% === Figure 6: Motor Output (Actuator Motors) ===
-            if (isfield(log.data, 'actuator_motors_0') && exist('motors', 'var'))
-    
-                % 1. Get motor count
-                n_motors = 0;
+            % -----------------------------------------------------------------
+            % Figure 6: Motors
+            % -----------------------------------------------------------------
+            if isfield(log.data, 'actuator_motors_0') && exist('motors', 'var')
+
                 if isfield(log, 'params') && isfield(log.params, 'CA_ROTOR_COUNT')
                     n_motors = double(log.params.CA_ROTOR_COUNT);
                 else
-                    n_motors = size(motors, 2); 
+                    n_motors = size(motors, 2);
                 end
-    
-                % Limit max count to prevent errors
                 n_motors = min(n_motors, MAX_MOTORS);
-    
-                % 2. Plotting
+
                 if n_motors > 0
-                    figure;
-                    set(gcf, 'Name', 'Actuator Motors', 'Color', 'w');
-    
-                    % === Key point: Generate n_motors distinct colors ===
-                    % Use hsv colorspace for uniform sampling between 0-1, ensuring distinct colors
-                    % Can also try 'turbo' or 'jet'
-                    motor_colors = hsv(n_motors); 
-    
+                    figure('Name', 'Actuator Motors', 'Color', 'w');
+                    motor_colors = make_channel_colors(n_motors, sty);
+
                     for i = 1:n_motors
-                        subplot(n_motors, 1, i);
-                        hold on;
-    
+                        subplot(n_motors, 1, i); hold on;
+
                         if i <= size(motors, 2)
-                            % Extract color i
-                            this_color = motor_colors(i, :);
-    
                             plot(log.data.actuator_motors_0.timestamp*1e-6, motors(:, i), ...
-                                 'Color', this_color, 'LineWidth', 1);
+                                'Color', motor_colors(i,:), 'LineWidth', sty.lw_multi);
                         end
-    
+
                         grid on;
                         ylabel(sprintf('Motor %d', i));
-                        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-                        % Only first plot shows title
+                        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
                         if i == 1
                             title(sprintf('Actuator Motors (Total: %d)', n_motors));
                         end
-    
-                        % Only last plot shows time axis
                         if i == n_motors
                             xlabel('Time (s)');
                         else
                             set(gca, 'XTickLabel', []);
                         end
-    
-                        % Adjust axis range for clearer waveform (optional)
-                        % axis tight; 
                     end
-    
-                    % Auto-adjust layout (if Matlab version supports it)
-                    % sgtitle('Motors Output');
                     % PlotToFile(gcf, 'results/motors.png', 20, 20);
                 end
             end
-    
-            %% === Figure 7: Servo Output (Actuator Servos) ===
-            if (isfield(log.data, 'actuator_servos_0') && exist('servos', 'var'))
-    
-                % 1. Get servo count
-                n_servos = 0;
+
+            % -----------------------------------------------------------------
+            % Figure 7: Servos
+            % -----------------------------------------------------------------
+            if isfield(log.data, 'actuator_servos_0') && exist('servos', 'var')
+
                 if isfield(log, 'params') && isfield(log.params, 'CA_SV_CS_COUNT')
                     n_servos = double(log.params.CA_SV_CS_COUNT);
                 else
                     n_servos = size(servos, 2);
                 end
-    
-                % Limit max count
                 n_servos = min(n_servos, MAX_SERVOS);
-    
-                % 2. Plotting
+
                 if n_servos > 0
-                    figure;
-                    set(gcf, 'Name', 'Actuator Servos', 'Color', 'w');
-    
-                    % === Key point: Generate n_servos distinct colors ===
-                    % To differentiate from motor colors, we can offset HSV phase or reverse
-                    % Here use 'lines' colormap which has high contrast, suitable for <=8 items
-                    if n_servos <= 7
-                        servo_colors = lines(n_servos);
-                    else
-                        servo_colors = hsv(n_servos); % Use hsv for >7 to avoid duplicates
-                    end
-    
+                    figure('Name', 'Actuator Servos', 'Color', 'w');
+                    servo_colors = make_channel_colors(n_servos, sty);
+
                     for i = 1:n_servos
-                        subplot(n_servos, 1, i);
-                        hold on;
-    
+                        subplot(n_servos, 1, i); hold on;
+
                         if i <= size(servos, 2)
-                            this_color = servo_colors(i, :);
-    
                             plot(log.data.actuator_servos_0.timestamp*1e-6, servos(:, i), ...
-                                 'Color', this_color, 'LineWidth', 1);
+                                'Color', servo_colors(i,:), 'LineWidth', sty.lw_multi);
                         end
-    
+
                         grid on;
                         ylabel(sprintf('Servo %d', i));
-                        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+                        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
                         if i == 1
                             title(sprintf('Actuator Servos (Total: %d)', n_servos));
                         end
-    
                         if i == n_servos
                             xlabel('Time (s)');
                         else
@@ -479,292 +498,269 @@ if control_fig
                 end
             end
         end
-        % -------------------------------------------------------------------------
-        % 2. PWM Outputs (Figure 8) - Based on active_channels
-        % -------------------------------------------------------------------------
+
+        % -----------------------------------------------------------------
+        % Figure 8: PWM Outputs
+        % -----------------------------------------------------------------
         if exist('active_channels', 'var') && ~isempty(active_channels)
-            figure; set(gcf, 'Name', 'Actuator Outputs (PWM)', 'Color', 'w');
-    
-            % Split Motor vs Servo
+            figure('Name', 'Actuator Outputs (PWM)', 'Color', 'w');
+
             is_motor = strcmp({active_channels.type}, 'Motor');
             idx_m = find(is_motor);
             idx_s = find(~is_motor);
-    
+
             n_plots = double(~isempty(idx_m)) + double(~isempty(idx_s));
-            cur = 1; ax_list = [];
-    
-            % Subplot 1: Motors
+            cur = 1;
+            ax_list = [];
+
             if ~isempty(idx_m)
                 ax = subplot(n_plots, 1, cur); hold on;
-                cols = hsv(length(idx_m));
+                cols = make_channel_colors(length(idx_m), sty);
                 for k = 1:length(idx_m)
                     info = active_channels(idx_m(k));
                     data = log.data.actuator_outputs_0.(info.col_name);
-                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', 1, 'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
+                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', sty.lw_multi, ...
+                        'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
                 end
                 grid on; ylabel('PWM (us)'); title('Motors PWM'); legend('show');
-                add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-                ax_list = [ax_list, ax]; cur = cur + 1;
+                add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                    vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+                ax_list = [ax_list, ax];
+                cur = cur + 1;
             end
-    
-            % Subplot 2: Others
+
             if ~isempty(idx_s)
                 ax = subplot(n_plots, 1, cur); hold on;
-                cols = lines(length(idx_s));
+                cols = make_channel_colors(length(idx_s), sty);
                 for k = 1:length(idx_s)
                     info = active_channels(idx_s(k));
                     data = log.data.actuator_outputs_0.(info.col_name);
-                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', 1, 'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
+                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', sty.lw_multi, ...
+                        'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
                 end
                 grid on; ylabel('PWM (us)'); title('Servos/Other PWM'); legend('show');
-                add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+                add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                    vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
                 ax_list = [ax_list, ax];
             end
-            if ~isempty(ax_list), linkaxes(ax_list, 'x'); end; xlabel('Time (s)');
+
+            if ~isempty(ax_list)
+                linkaxes(ax_list, 'x');
+            end
+            xlabel('Time (s)');
+            % PlotToFile(gcf, 'results/PWM.png', 20, 20);
         else
             fprintf('Figure 8 Skipped: No active PWM channels identified.\n');
         end
-        % PlotToFile(gcf, 'results/PWM.png', 20, 20);
+
     else
-        %% === Mode B: Original plotting (Fallback) ===
-        % Logic: When active_channels parsing fails, directly plot first N columns of legacy_pwm
-    
-        figure;
-        set(gcf, 'Name', 'Actuator Outputs (Raw)', 'Color', 'w');
-    
-        ax_raw = [];
-        raw_colors = lines(n_raw_plot);
+        % -----------------------------------------------------------------
+        % Original plotting fallback
+        % -----------------------------------------------------------------
+        figure('Name', 'Actuator Outputs (Raw)', 'Color', 'w');
+
+        ax_raw = gobjects(1, n_raw_plot);
+        raw_colors = make_channel_colors(n_raw_plot, sty);
+
         for i = 1:n_raw_plot
             ax_raw(i) = subplot(n_raw_plot, 1, i); hold on;
-    
+
             y_data = outputs(:, i);
-    
-            % Simple filtering: Remove all-NaN or all-zero data to avoid empty lines
+
             if ~all(isnan(y_data)) && any(y_data ~= 0)
-                plot(outputs_t, y_data, 'Color', raw_colors(i, :), 'LineWidth', 1);
+                plot(outputs_t, y_data, 'Color', raw_colors(i,:), 'LineWidth', sty.lw_multi);
             end
-    
-            ylabel(sprintf('Out %d', i-1)); 
+
+            ylabel(sprintf('Out %d', i-1));
             grid on;
-    
-            if i == 1, title(sprintf('Actuator Outputs (First %d Raw)', n_raw_plot)); end
-            if i < n_raw_plot, set(gca, 'XTickLabel', []); else, xlabel('Time (s)'); end
-    
+
+            if i == 1
+                title(sprintf('Actuator Outputs (First %d Raw)', n_raw_plot));
+            end
+            if i < n_raw_plot
+                set(gca, 'XTickLabel', []);
+            else
+                xlabel('Time (s)');
+            end
+
             axis tight;
-            add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         end
-    
+
         linkaxes(ax_raw, 'x');
         % PlotToFile(gcf, 'results/pwm.png', 20, 20);
     end
-
 end
 
-
-
-%%
+%% =========================================================================
+%  Verbose figures
+% =========================================================================
 if verbose
 
-    
-    %% =========================================================================
-    %   Angular Accel
-    % =========================================================================
-    if exist('vehicle_angular_acceleration', 'var') || isfield(log.data, 'vehicle_angular_velocity_0') && ...
-           ismember('xyz_derivative_0_', log.data.vehicle_angular_velocity_0.Properties.VariableNames)
-        figure; set(gcf, 'Name', 'Ang Acc vs rates', 'Color', 'w');
+    % ---------------------------------------------------------------------
+    % Angular Accel
+    % ---------------------------------------------------------------------
+    if exist('vehicle_angular_acceleration', 'var') || ...
+       (isfield(log.data, 'vehicle_angular_velocity_0') && ...
+        ismember('xyz_derivative_0_', log.data.vehicle_angular_velocity_0.Properties.VariableNames))
+
+        figure('Name', 'Ang Acc vs rates', 'Color', 'w');
         titles = {'Roll Ang Acc', 'Pitch Ang Acc', 'Yaw Ang Acc'};
-        ax = [];
+        ax = gobjects(1,3);
+
         for i = 1:3
             ax(i) = subplot(3,1,i); hold on;
-            plot(vehicle_angular_acceleration_t, vehicle_angular_acceleration(:,i), '--', 'LineWidth', 0.5);
-            plot(vehicle_angular_velocity_t, vehicle_angular_velocity(:,i), '-', 'LineWidth', 1, 'Color', [0.6, 0.2, 0, 0.5]);
-            grid on; ylabel('rad/s^2'); title(titles{i});
-            add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+            plot(vehicle_angular_acceleration_t, vehicle_angular_acceleration(:,i), sty.aux1{:});
+            plot(vehicle_angular_velocity_t, vehicle_angular_velocity(:,i), sty.response_fade{:});
+            grid on; ylabel('rad/s$^2$'); title(titles{i});
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         end
         linkaxes(ax, 'x'); xlabel('Time (s)');
         % PlotToFile(gcf, 'results/Angular_Accel.png', 20, 10);
     end
-    %% =========================================================================
-    %  Manual Control Inputs 
-    %  Corresponds to Python: Manual Control Inputs (Radio or Joystick)
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Manual Control Inputs
+    % ---------------------------------------------------------------------
     if isfield(log.data, 'manual_control_setpoint_0')
-        figure; 
-        set(gcf, 'Name', 'Manual Control Inputs', 'Color', 'w');
-        hold on;
-        plot(rc_t, rc_roll,  'LineWidth', 1.5, 'DisplayName', 'Roll');
-        plot(rc_t, rc_pitch, 'LineWidth', 1.5, 'DisplayName', 'Pitch');
-        plot(rc_t, rc_yaw,   'LineWidth', 1.5, 'DisplayName', 'Yaw');
-        plot(rc_t, rc_throttle,   'LineWidth', 1.5, 'DisplayName', 'Throttle');
-    
-        grid on; 
+        figure('Name', 'Manual Control Inputs', 'Color', 'w'); hold on;
+        plot(rc_t, rc_roll,     sty.axis1_bold{:}, 'DisplayName', 'Roll');
+        plot(rc_t, rc_pitch,    sty.axis2_bold{:}, 'DisplayName', 'Pitch');
+        plot(rc_t, rc_yaw,      sty.axis3_bold{:}, 'DisplayName', 'Yaw');
+        plot(rc_t, rc_throttle, sty.thrust_bold{:}, 'DisplayName', 'Throttle');
+
+        grid on;
         legend('show', 'Location', 'best', 'NumColumns', 4);
-    
-        ylabel('Norm Input [-1, 1]'); 
+        ylabel('Norm Input [-1, 1]');
         title('Manual Control Inputs (Sticks)');
         xlabel('Time (s)');
-        ylim([-1.1, 1.1]); % Fix Y-axis range for clearer view
-    
-        % Add background
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        ylim([-1.1, 1.1]);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Manual_input.png', 20, 10);
     end
 
-    
-    %% =========================================================================
-    %  Frequency Analysis (FFT) - Figure 12/13/14
-    %  Function: Perform frequency domain analysis on control, angular velocity, angular acceleration
-    %  and automatically mark filter parameters
-    % =========================================================================
-    % --- 1. Actuator Controls FFT (corresponds to vehicle_torque_setpoint) ---
+    % ---------------------------------------------------------------------
+    % FFT
+    % ---------------------------------------------------------------------
     if exist('actuator_controls_0', 'var')
-        figure; 
-        set(gcf, 'Color', 'w', 'Name', 'Actuator Controls FFT');
-        % Prepare data: [Roll, Pitch, Yaw]
+        figure('Color', 'w', 'Name', 'Actuator Controls FFT');
         ctrl_data = [actuator_controls_0.roll, actuator_controls_0.pitch, actuator_controls_0.yaw];
-        % Define parameters to mark (parameter name, display label)
         markers = {
             'MC_DTERM_CUTOFF',  'D-Term Cutoff';
             'IMU_DGYRO_CUTOFF', 'D-Gyro Cutoff';
             'IMU_GYRO_CUTOFF',  'Gyro Cutoff'
         };
-    
         draw_fft_analysis(actuator_controls_0.time, ctrl_data, {'Roll', 'Pitch', 'Yaw'}, ...
-                          'Actuator Controls FFT (Torque Setpoint)', log.params, markers);
+            'Actuator Controls FFT (Torque Setpoint)', log.params, markers);
         % PlotToFile(gcf, 'results/control_fft.png', 20, 10);
     end
-    
-    % --- 2. Angular Velocity FFT (corresponds to vehicle_angular_velocity) ---
+
     if exist('vehicle_angular_velocity', 'var')
-        figure; 
-        set(gcf, 'Color', 'w', 'Name', 'Angular Velocity FFT');
+        figure('Color', 'w', 'Name', 'Angular Velocity FFT');
         markers = {
-            'IMU_GYRO_CUTOFF',   'Gyro Cutoff';
-            'IMU_GYRO_NF_FREQ',  'Notch Freq'
+            'IMU_GYRO_CUTOFF',  'Gyro Cutoff';
+            'IMU_GYRO_NF_FREQ', 'Notch Freq'
         };
-    
-        draw_fft_analysis(vehicle_angular_velocity_t, vehicle_angular_velocity, {'Rollrate', 'Pitchrate', 'Yawrate'}, ...
-                          'Angular Velocity FFT', log.params, markers);
+        draw_fft_analysis(vehicle_angular_velocity_t, vehicle_angular_velocity, ...
+            {'Rollrate', 'Pitchrate', 'Yawrate'}, 'Angular Velocity FFT', log.params, markers);
         % PlotToFile(gcf, 'results/rate_fft.png', 20, 10);
     end
-    
-    % --- 3. Angular Acceleration FFT (corresponds to vehicle_angular_acceleration) ---
+
     if exist('vehicle_angular_acceleration', 'var')
-        figure; 
-        set(gcf, 'Color', 'w', 'Name', 'Angular Acceleration FFT');
+        figure('Color', 'w', 'Name', 'Angular Acceleration FFT');
         markers = {
-            'IMU_DGYRO_CUTOFF',  'D-Gyro Cutoff';
-            'IMU_GYRO_NF_FREQ',  'Notch Freq'
+            'IMU_DGYRO_CUTOFF', 'D-Gyro Cutoff';
+            'IMU_GYRO_NF_FREQ', 'Notch Freq'
         };
-    
-        draw_fft_analysis(vehicle_angular_acceleration_t, vehicle_angular_acceleration, {'Roll Acc', 'Pitch Acc', 'Yaw Acc'}, ...
-                          'Angular Acceleration FFT', log.params, markers);
+        draw_fft_analysis(vehicle_angular_acceleration_t, vehicle_angular_acceleration, ...
+            {'Roll Acc', 'Pitch Acc', 'Yaw Acc'}, 'Angular Acceleration FFT', log.params, markers);
         % PlotToFile(gcf, 'results/acc_fft.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Raw Acceleration
-    %  Corresponds to Python: Raw Acceleration (sensor_combined)
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Raw Acceleration
+    % ---------------------------------------------------------------------
     if exist('raw_acc', 'var')
-        figure;
-        set(gcf, 'Name', 'Raw Acceleration', 'Color', 'w');
-    
-        hold on;
-        % Use a thinner line width (0.5) since raw sensor data is typically noisy and dense
-        plot(raw_acc_t, raw_acc(:,1), 'r-', 'LineWidth', 0.5, 'DisplayName', 'Acc X');
-        plot(raw_acc_t, raw_acc(:,2), 'k-', 'LineWidth', 0.5, 'DisplayName', 'Acc Y');
-        plot(raw_acc_t, raw_acc(:,3), 'b-', 'LineWidth', 0.5, 'DisplayName', 'Acc Z');
-    
-        grid on; 
+        figure('Name', 'Raw Acceleration', 'Color', 'w'); hold on;
+        plot(raw_acc_t, raw_acc(:,1), sty.axis1_thin{:}, 'DisplayName', 'Acc X');
+        plot(raw_acc_t, raw_acc(:,2), sty.axis2_thin{:}, 'DisplayName', 'Acc Y');
+        plot(raw_acc_t, raw_acc(:,3), sty.axis3_thin{:}, 'DisplayName', 'Acc Z');
+
+        grid on;
         legend('show', 'Location', 'best');
-        ylabel('Acceleration [m/s^2]'); 
+        ylabel('Acceleration [m/s$^2$]');
         title('Raw Acceleration');
         xlabel('Time (s)');
-    
-        % Add background
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/raw_acc.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Vibration Metrics (Curve-only version)
-    %  Logic: Only plot vibration curves, no threshold background shading
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Vibration Metrics
+    % ---------------------------------------------------------------------
     if exist('vib_data', 'var') && ~isempty(vib_data)
-        figure;
-        set(gcf, 'Name', 'Vibration Metrics', 'Color', 'w');
-        hold on;
-    
-        % --- Plot data curves ---
-        line_colors = {[0.8, 0.4, 0], [0, 0.4, 0.8], [0.8, 0, 0.8], [0, 0.5, 0]}; 
+        figure('Name', 'Vibration Metrics', 'Color', 'w'); hold on;
+        line_colors = make_channel_colors(length(vib_data), sty);
         for k = 1:length(vib_data)
             id = vib_data(k).id;
-            c_idx = mod(k-1, length(line_colors)) + 1;
             plot(vib_data(k).t, vib_data(k).val, ...
-                 'Color', line_colors{c_idx}, 'LineWidth', 1.5, ...
-                 'DisplayName', sprintf('Accel %d Vib [m/s^2]', id));
+                'Color', line_colors(k,:), ...
+                'LineWidth', sty.lw_multi_bold, ...
+                'DisplayName', sprintf('Accel %d Vib [m/s$^2$]', id));
         end
-    
-        % --- Basic decoration ---
         grid on;
-        ylabel('Vibration Level [m/s^2]');
+        ylabel('Vibration Level [m/s$^2$]');
         title('Vibration Metrics');
         xlabel('Time (s)');
         legend('show', 'Location', 'best');
-    
-        % Overlay unified flight mode background (usually kept for seeing which phase has high vibration)
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         set(gca, 'Layer', 'top');
         % PlotToFile(gcf, 'results/Vibration_Metrics.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Spectrogram (PSD over Time)
-    %  Corresponds to Python: Acceleration / Gyro / AngAcc Spectrogram
-    %  Principle: Calculate total power spectral density of X+Y+Z (dB)
-    % =========================================================================
-    
-    % --- 1. Acceleration Spectrogram (corresponds to sensor_combined) ---
+
+    % ---------------------------------------------------------------------
+    % Spectrogram
+    % ---------------------------------------------------------------------
     if exist('raw_acc', 'var') && ~isempty(raw_acc)
-        figure;
-        set(gcf, 'Name', 'Accel PSD', 'Color', 'w');
+        figure('Name', 'Accel PSD', 'Color', 'w');
         draw_spec_analysis(raw_acc_t, raw_acc, 'Acceleration Power Spectral Density (Sum X+Y+Z)');
         % PlotToFile(gcf, 'results/Acceleration_Spectrogram.png', 20, 10);
     end
-    
-    % --- 2. Filtered Gyro Spectrogram (corresponds to vehicle_angular_velocity) ---
+
     if exist('vehicle_angular_velocity', 'var')
-        figure;
-        set(gcf, 'Name', 'Gyro PSD', 'Color', 'w');
-        draw_spec_analysis(vehicle_angular_velocity_t, vehicle_angular_velocity, 'Angular Velocity PSD (Sum X+Y+Z)');
+        figure('Name', 'Gyro PSD', 'Color', 'w');
+        draw_spec_analysis(vehicle_angular_velocity_t, vehicle_angular_velocity, ...
+            'Angular Velocity PSD (Sum X+Y+Z)');
         % PlotToFile(gcf, 'results/Gyro_Spectrogram.png', 20, 10);
     end
-    
-    % --- 3. Filtered Angular Acceleration Spectrogram (corresponds to vehicle_angular_acceleration) ---
+
     if exist('vehicle_angular_acceleration', 'var')
-        figure;
-        set(gcf, 'Name', 'AngAcc PSD', 'Color', 'w');
-        draw_spec_analysis(vehicle_angular_acceleration_t, vehicle_angular_acceleration, 'Angular Acceleration PSD (Sum X+Y+Z)');
+        figure('Name', 'AngAcc PSD', 'Color', 'w');
+        draw_spec_analysis(vehicle_angular_acceleration_t, vehicle_angular_acceleration, ...
+            'Angular Acceleration PSD (Sum X+Y+Z)');
         % PlotToFile(gcf, 'results/AngAcc_Spectrogram.png', 20, 10);
     end
-    %% =========================================================================
-    %  Raw Angular Speed (Gyroscope)
-    %  Corresponds to Python: Raw Angular Speed (sensor_combined)
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Raw Angular Speed
+    % ---------------------------------------------------------------------
     if exist('raw_gyro', 'var')
-        figure;
-        set(gcf, 'Name', 'Raw Angular Speed', 'Color', 'w');
-        hold on;
-        plot(raw_gyro_t, raw_gyro(:,1), 'r-', 'LineWidth', 0.5, 'DisplayName', 'X');
-        plot(raw_gyro_t, raw_gyro(:,2), 'k-', 'LineWidth', 0.5, 'DisplayName', 'Y');
-        plot(raw_gyro_t, raw_gyro(:,3), 'b-', 'LineWidth', 0.5, 'DisplayName', 'Z');
-    
+        figure('Name', 'Raw Angular Speed', 'Color', 'w'); hold on;
+        plot(raw_gyro_t, raw_gyro(:,1), sty.axis1_thin{:}, 'DisplayName', 'X');
+        plot(raw_gyro_t, raw_gyro(:,2), sty.axis2_thin{:}, 'DisplayName', 'Y');
+        plot(raw_gyro_t, raw_gyro(:,3), sty.axis3_thin{:}, 'DisplayName', 'Z');
+
         grid on; legend('show');
-        ylabel('Angular Speed [deg/s]'); title('Raw Angular Speed (Gyroscope)');
+        ylabel('Angular Speed [deg/s]');
+        title('Raw Angular Speed (Gyroscope)');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/raw_gyro.png', 20, 10);
     end
 
@@ -853,368 +849,312 @@ if verbose
     %  Corresponds to Python: magnetometer_ga_topic
     % =========================================================================
     if exist('mag_data', 'var')
-        figure; 
-        set(gcf, 'Name', 'Raw Magnetic Field', 'Color', 'w');
-        hold on;
-        plot(mag_t, mag_data(:,1), 'r-', 'LineWidth', 1, 'DisplayName', 'X');
-        plot(mag_t, mag_data(:,2), STYLE_SP{:}, 'DisplayName', 'Y');
-        plot(mag_t, mag_data(:,3), 'b-', 'LineWidth', 1, 'DisplayName', 'Z');
-    
+        figure('Name', 'Raw Magnetic Field', 'Color', 'w'); hold on;
+        plot(mag_t, mag_data(:,1), sty.axis1{:}, 'DisplayName', 'X');
+        plot(mag_t, mag_data(:,2), sty.axis2{:}, 'DisplayName', 'Y');
+        plot(mag_t, mag_data(:,3), sty.axis3{:}, 'DisplayName', 'Z');
+
         grid on; legend('show');
-        ylabel('Magnetic Field [Gauss]'); title('Raw Magnetic Field Strength');
+        ylabel('Magnetic Field [Gauss]');
+        title('Raw Magnetic Field Strength');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Raw_Magnetic.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Distance Sensor
-    %  Corresponds to Python: distance_sensor
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Distance Sensor
+    % ---------------------------------------------------------------------
     if exist('dist_val', 'var') || exist('dist_bottom', 'var')
-        figure; 
-        set(gcf, 'Name', 'Distance Sensor', 'Color', 'w');
-        hold on;
-    
-        % Sensor measured values
+        figure('Name', 'Distance Sensor', 'Color', 'w'); hold on;
+
         if exist('dist_val', 'var')
-            plot(dist_sensor_t, dist_val, 'b-', 'LineWidth', 1, 'DisplayName', 'Distance');
-            % Variance is usually small or may need dual-axis display; plot together for reference
-            % plot(dist_sensor_t, dist_var, 'r:', 'DisplayName', 'Variance'); 
+            plot(dist_sensor_t, dist_val, sty.response{:}, 'DisplayName', 'Distance');
         end
-    
-        % Estimated value (Dist Bottom)
         if exist('dist_bottom', 'var')
-            plot(dist_bottom_t, dist_bottom, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Est. Dist Bottom');
-            % Optionally plot the valid flag, or keep as reference only
+            plot(dist_bottom_t, dist_bottom, sty.setpoint{:}, 'DisplayName', 'Est. Dist Bottom');
         end
-    
+
         grid on; legend('show');
-        ylabel('Distance [m]'); title('Distance Sensor');
+        ylabel('Distance [m]');
+        title('Distance Sensor');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/distance_sensor.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  GPS Uncertainty
-    %  Corresponds to Python: GPS Uncertainty
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % GPS Uncertainty
+    % ---------------------------------------------------------------------
     if exist('gps_info', 'var')
-        figure; 
-        set(gcf, 'Name', 'GPS Uncertainty', 'Color', 'w');
-        hold on;
-    
-        % Plot each accuracy metric
-        plot(gps_t, gps_info.eph, 'r-', 'LineWidth', 1, 'DisplayName', 'H Pos Accuracy (EPH) [m]');
-        plot(gps_t, gps_info.epv, 'b-', 'LineWidth', 1, 'DisplayName', 'V Pos Accuracy (EPV) [m]');
-    
+        figure('Name', 'GPS Uncertainty', 'Color', 'w'); hold on;
+
+        plot(gps_t, gps_info.eph, sty.axis1{:}, 'DisplayName', 'H Pos Accuracy (EPH) [m]');
+        plot(gps_t, gps_info.epv, sty.axis2{:}, 'DisplayName', 'V Pos Accuracy (EPV) [m]');
+
         if ismember('hdop', gps_info.Properties.VariableNames)
-            plot(gps_t, gps_info.hdop, 'r--', 'LineWidth', 0.5, 'DisplayName', 'HDOP [m]');
-            plot(gps_t, gps_info.vdop, 'b--', 'LineWidth', 0.5, 'DisplayName', 'VDOP [m]');
+            plot(gps_t, gps_info.hdop, sty.axis1_dash{:}, 'DisplayName', 'HDOP [m]');
+            plot(gps_t, gps_info.vdop, sty.axis2_dash{:}, 'DisplayName', 'VDOP [m]');
         end
-    
-        plot(gps_t, gps_info.s_variance, 'k:', 'LineWidth', 1, 'DisplayName', 'Speed Accuracy [m/s]');
-    
-        % Satellites and Fix Type usually have different scales; could use dual-axis, or plot only above.
-        % Here scale satellites by 2 or plot separately.
-        % Following Python logic, plot in the same figure and limit Y range to [0, 40]
-        plot(gps_t, gps_info.satellites, 'm-', 'LineWidth', 1.5, 'DisplayName', 'Satellites Used');
-        plot(gps_t, gps_info.fix_type, 'g-', 'LineWidth', 1.5, 'DisplayName', 'Fix Type (3=3D, 4=DGPS)');
-    
-        grid on; legend('show', 'Location', 'best', 'NumColumns', 2);
-        ylabel('Value'); title('GPS Uncertainty & Status');
+
+        plot(gps_t, gps_info.s_variance, sty.axis4_dot{:}, 'DisplayName', 'Speed Accuracy [m/s]');
+        plot(gps_t, gps_info.satellites, sty.axis5_bold{:}, 'DisplayName', 'Satellites Used');
+        plot(gps_t, gps_info.fix_type, sty.axis3_bold{:}, 'DisplayName', 'Fix Type');
+
+        grid on;
+        legend('show', 'Location', 'best', 'NumColumns', 2);
+        ylabel('Value');
+        title('GPS Uncertainty & Status');
         xlabel('Time (s)');
-        ylim([0, 40]); % Limit range to avoid huge variance before fix ruining the view
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        ylim([0, 40]);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/GPS_Uncertainty.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  GPS Noise & Jamming
-    %  Corresponds to Python: GPS Noise & Jamming
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % GPS Noise & Jamming
+    % ---------------------------------------------------------------------
     if exist('gps_info', 'var')
-        figure; 
-        set(gcf, 'Name', 'GPS Noise & Jamming', 'Color', 'w');
-        hold on;
-    
-        plot(gps_t, gps_info.noise, 'b-', 'LineWidth', 1, 'DisplayName', 'Noise per ms');
-        plot(gps_t, gps_info.jamming, 'r-', 'LineWidth', 1, 'DisplayName', 'Jamming Indicator');
-    
+        figure('Name', 'GPS Noise & Jamming', 'Color', 'w'); hold on;
+        plot(gps_t, gps_info.noise,   sty.axis2{:}, 'DisplayName', 'Noise per ms');
+        plot(gps_t, gps_info.jamming, sty.axis1{:}, 'DisplayName', 'Jamming Indicator');
+
         grid on; legend('show');
-        ylabel('Value'); title('GPS Noise & Jamming');
+        ylabel('Value');
+        title('GPS Noise & Jamming');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/GPS_Noise_Jamming.png', 20, 10);
     end
-    %% =========================================================================
-    %  Thrust and Magnetic Field
-    %  Corresponds to Python: Thrust and Magnetic Field
-    %  Purpose: Check if magnetic field is disturbed under high thrust (Mag Norm should remain constant)
-    % =========================================================================
-    figure;
-    set(gcf, 'Name', 'Thrust and Magnetic Field', 'Color', 'w');
-    
-    % Plot the magnetic field norm (magnitude)
+
+    % ---------------------------------------------------------------------
+    % Thrust and Magnetic Field
+    % ---------------------------------------------------------------------
+    figure('Name', 'Thrust and Magnetic Field', 'Color', 'w');
     mag_mag = sqrt(mag_data(:,1).^2 + mag_data(:,2).^2 + mag_data(:,3).^2);
-    plot(mag_t,mag_mag, 'r'); % Example: red color for the magnetic field
-    
+
     hold on;
-    
-    % Plot thrust if available
+    plot(mag_t, mag_mag, sty.axis1{:}, 'DisplayName', 'Magnetic Field Norm');
+
     if ~isempty(actuator_controls_0.thrust)
-        plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust, 'g'); % Example: green color for thrust
+        plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust, ...
+            sty.thrust{:}, 'DisplayName', 'Thrust');
     end
-    
-    % If VTOL and not dynamic control allocation, plot fixed-wing thrust
+
     if log.data.vehicle_status_0.is_vtol(1) && ~dynamic_control_alloc && ~isempty(thrust_sp_1)
-        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, 'b'); % Example: blue color for fixed-wing thrust
+        plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
+            sty.thrust_alt{:}, 'DisplayName', 'Thrust (Fixed-wing)');
     end
-    
-    % Plot background for flight modes if available
-    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    
-    % Finalize the plot
-    hold off;
+
+    add_standard_background(vis_flight_intervals, vis_flight_names, ...
+        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
     grid on;
     xlabel('Time (s)');
-    ylabel('Magnitude');title('Thrust and Magnetic Field');
-    legend({'Magnetic Field Norm', 'Thrust', 'Thrust (Fixed-wing)'}, 'Location', 'best');
+    ylabel('Magnitude');
+    title('Thrust and Magnetic Field');
+    legend('show', 'Location', 'best');
     % PlotToFile(gcf, 'results/Thrust_Magnetic_Field.png', 20, 10);
-    
-    %% =========================================================================
-    %  Power (Battery & System)
-    %  Corresponds to Python: Power
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Power (Battery & System)
+    % ---------------------------------------------------------------------
     if exist('bat_v', 'var')
-        figure; 
-        set(gcf, 'Name', 'Power', 'Color', 'w');
-    
-        % --- Subplot 1: Voltage/Current ---
+        figure('Name', 'Power', 'Color', 'w');
+
         ax1 = subplot(2,1,1); hold on;
         yyaxis left
-        plot(bat_t, bat_v, 'b-', 'LineWidth', 1.5, 'DisplayName', 'Voltage [V]');
+        plot(bat_t, bat_v, sty.axis2_bold{:}, 'DisplayName', 'Voltage [V]');
         ylabel('Voltage [V]');
-    
+
         yyaxis right
-        plot(bat_t, bat_i, 'r-', 'LineWidth', 1, 'DisplayName', 'Current [A]');
+        plot(bat_t, bat_i, sty.axis1{:}, 'DisplayName', 'Current [A]');
         ylabel('Current [A]');
-    
-        title('Battery Voltage & Current'); grid on; legend('show', 'Location', 'best');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    
-        % --- Subplot 2: Capacity consumed & Remaining ---
+
+        title('Battery Voltage & Current');
+        grid on;
+        legend('show', 'Location', 'best');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
         ax2 = subplot(2,1,2); hold on;
         yyaxis left
-        plot(bat_t, bat_discharged/100, 'k-', 'DisplayName', 'Discharged [mAh/100]');
+        plot(bat_t, bat_discharged/100, sty.axis4{:}, 'DisplayName', 'Discharged [mAh/100]');
         ylabel('Discharged [mAh/100]');
-    
+
         yyaxis right
-        plot(bat_t, bat_remaining*100, 'g-', 'LineWidth', 1.5, 'DisplayName', 'Remaining [%]');
-        ylabel('Remaining [%]');
+        plot(bat_t, bat_remaining*100, sty.axis3_bold{:}, 'DisplayName', 'Remaining [\%]');
+        ylabel('Remaining [\%]');
         ylim([0, 105]);
-    
-        xlabel('Time (s)'); grid on; legend('show', 'Location', 'best');
+
+        xlabel('Time (s)');
+        grid on;
+        legend('show', 'Location', 'best');
         linkaxes([ax1, ax2], 'x');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Battery_System.png', 20, 20);
     end
-    
-    %% =========================================================================
-    %  Temperature
-    %  Corresponds to Python: Temperature
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Temperature
+    % ---------------------------------------------------------------------
     if exist('temp_data', 'var') && ~isempty(temp_data)
-        figure('Name', 'Temperature', 'Color', 'w');
-        hold on;
-    
-        % Auto-generate colors to avoid hardcoding
-        colors = lines(length(temp_data));
-    
+        figure('Name', 'Temperature', 'Color', 'w'); hold on;
+        colors = make_channel_colors(length(temp_data), sty);
+
         for i = 1:length(temp_data)
-            plot(temp_data(i).t, temp_data(i).val, 'LineWidth', 1.5, ...
-                 'Color', colors(i,:), 'DisplayName', temp_data(i).name);
+            plot(temp_data(i).t, temp_data(i).val, ...
+                'LineWidth', sty.lw_multi_bold, ...
+                'Color', colors(i,:), ...
+                'DisplayName', temp_data(i).name);
         end
-    
+
         grid on; legend('show', 'Location', 'best');
-        ylabel('Temperature [°C]'); title('System Temperatures');
+        ylabel('Temperature [$^\circ$C]');
+        title('System Temperatures');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Temperature.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Estimator Flags (Python logic replication)
-    %  Function: Dynamically extract Health, Timeout and Innovation Flags, only plot non-zero data
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Estimator Flags
+    % ---------------------------------------------------------------------
     if isfield(log.data, 'estimator_status_0')
-        figure('Name', 'Estimator Flags (Dynamic)', 'Color', 'w'); 
-        hold on;
-    
+        figure('Name', 'Estimator Flags (Dynamic)', 'Color', 'w'); hold on;
+
         plot_count = 0;
-        max_plots = 8; % Python limits to max 8 lines
-        colors = lines(max_plots); % Generate color table
+        max_plots = 8;
+        colors = make_channel_colors(max_plots, sty);
         active_legends = {};
-    
-        % Iterate through all candidate signals
+
         for i = 1:size(candidates, 1)
             lbl = candidates{i, 1};
             data = candidates{i, 2};
-    
-            % Filtering logic: if np.amax(cur_data) > 0.1
+
             if max(data) > 0.1
                 plot_count = plot_count + 1;
-    
-                % Plot
-                % To avoid overlap, we can add offset like a logic analyzer
-                % Or plot original values directly (as Python code shows), here choose direct plotting
-                plot(est_t, data, 'Color', colors(plot_count, :), 'LineWidth', 1.5);
-    
+                plot(est_t, data, 'Color', colors(plot_count,:), 'LineWidth', sty.lw_multi_bold);
                 active_legends{end+1} = lbl;
-    
-                % Exit when reaching limit
+
                 if plot_count >= max_plots
                     break;
                 end
             end
         end
-    
-        % 3. Post-processing
+
         if plot_count == 0
-            % If no error flags, plot Health Flags as placeholder (following Python logic)
-            plot(est_t, candidates{1,2}, 'k');
+            plot(est_t, candidates{1,2}, sty.axis4{:});
             active_legends{end+1} = candidates{1,1};
             title('Estimator Flags (All Good)');
         else
             title(sprintf('Estimator Flags (Top %d Active)', plot_count));
         end
-    
+
         grid on;
         legend(active_legends, 'Location', 'best');
-        ylabel('Flag Value'); 
+        ylabel('Flag Value');
         xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-        % Limit Y-axis range (some flags are 0-7)
-        % ylim([-0.5, 7.5]);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Estimator_Flags.png', 20, 10);
     end
-    %% =========================================================================
-    %  Failsafe Flags
-    %  Corresponds to Python: Failsafe Flags
-    %  Logic: Automatically search failsafe_flags_0 table for all non-zero columns and plot
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Failsafe Flags
+    % ---------------------------------------------------------------------
     if isfield(log.data, 'failsafe_flags_0')
-        figure; 
-        set(gcf, 'Name', 'Failsafe Flags', 'Color', 'w');
-        hold on;
-    
-        % 1. Plot total Failsafe state
+        figure('Name', 'Failsafe Flags', 'Color', 'w'); hold on;
+
         if exist('vs_failsafe', 'var')
-            area(vs_t, double(vs_failsafe), 'FaceColor', [1 0.8 0.8], 'EdgeColor', 'none', 'DisplayName', 'In Failsafe Mode');
+            area(vs_t, double(vs_failsafe), 'FaceColor', sty.fill_warn, ...
+                'EdgeColor', 'none', 'DisplayName', 'In Failsafe Mode');
         end
-    
-        % 2. Iterate through all flags
+
         plot_idx = 0;
-        colors = lines(10); % Take 10 colors for cycling
-    
+        colors = make_channel_colors(10, sty);
+
         for i = 1:length(fs_cols)
             col_name = fs_cols{i};
-            % Skip timestamp and mode_req non-flag fields
-            if strcmp(col_name, 'timestamp') || startsWith(col_name, 'mode_req'), continue; end
-    
+            if strcmp(col_name, 'timestamp') || startsWith(col_name, 'mode_req')
+                continue;
+            end
+
             data = fs_table.(col_name);
-            % Only plot if this flag was triggered during flight (max>0)
             if max(data) > 0
                 plot_idx = plot_idx + 1;
-                % Stacked offset display: 1, 2, 3...
-                plot(fs_t, double(data) * 0.8 + plot_idx, 'LineWidth', 1.5, ...
-                     'Color', colors(mod(plot_idx-1,10)+1, :), ...
-                     'DisplayName', strrep(col_name, '_', ' ')); % Remove underscores for better appearance
+                plot(fs_t, double(data) * 0.8 + plot_idx, ...
+                    'LineWidth', sty.lw_multi_bold, ...
+                    'Color', colors(mod(plot_idx-1,10)+1,:), ...
+                    'DisplayName', strrep(col_name, '_', ' '));
             end
         end
-    
+
         if plot_idx == 0
             text(mean(fs_t), 0.5, 'No Failsafe Flags Triggered', 'HorizontalAlignment', 'center');
         end
-    
+
         grid on; legend('show');
         title('Failsafe Flags Triggered');
-        ylabel('Flags (Stacked)'); xlabel('Time (s)');
+        ylabel('Flags (Stacked)');
+        xlabel('Time (s)');
         ylim([0, plot_idx + 2]);
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Failsafe_Flags.png', 20, 10);
     end
-    
-    
-    %% =========================================================================
-    %  CPU & RAM
-    %  Corresponds to Python: CPU & RAM
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % CPU & RAM
+    % ---------------------------------------------------------------------
     if isfield(log.data, 'cpuload_0')
-        figure('Name', 'CPU & RAM', 'Color', 'w'); 
-        hold on;
-        % 1. Plot RAM Usage (corresponds to colors3[1])
-        plot(cpu_t, ram_usage, 'LineWidth', 1.5, 'DisplayName', 'RAM Usage');
-        
-        % 2. Plot CPU Load (corresponds to colors3[2])
-        plot(cpu_t, cpu_load, 'LineWidth', 1.5, 'DisplayName', 'CPU Load');
-        
-        % Style tweaks
-        grid on; 
+        figure('Name', 'CPU & RAM', 'Color', 'w'); hold on;
+        plot(cpu_t, ram_usage, sty.axis2_bold{:}, 'DisplayName', 'RAM Usage');
+        plot(cpu_t, cpu_load,  sty.axis1_bold{:}, 'DisplayName', 'CPU Load');
+
+        grid on;
         legend('show', 'Location', 'best');
-        ylabel('Load / Usage [0-1]'); 
+        ylabel('Load / Usage [0-1]');
         title('CPU & RAM');
         xlabel('Time (s)');
-        
-        % Lock Y-axis range to 0..1 (consistent with Python y_range)
         ylim([0, 1]);
-        
-        % Add background
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/CPU.png', 20, 10);
     end
-    
-    %% =========================================================================
-    %  Sampling Regularity of Sensor Data
-    %  Corresponds to Python: Sampling Regularity (sensor_combined & estimator_status)
-    % =========================================================================
+
+    % ---------------------------------------------------------------------
+    % Sampling Regularity
+    % ---------------------------------------------------------------------
     if isfield(log.data, 'sensor_combined_0')
-        figure('Name', 'Sampling Regularity', 'Color', 'w');
-        hold on;
-    
-        % --- 1. Delta T (sampling interval) ---
-        % Python: np.diff(sensor_combined['timestamp'])
+        figure('Name', 'Sampling Regularity', 'Color', 'w'); hold on;
+
         sc = log.data.sensor_combined_0;
-        
-        % Original timestamp is usually uint64 (us), convert to double for diff
-        t_raw = double(sc.timestamp); 
-        dt_seq = diff(t_raw); % Result unit: us
-        
-        % X-axis time: corresponds to 2nd point onward after diff, convert to seconds
-        t_plot_sc = t_raw(2:end) * 1e-6; 
-    
-        % Plot curve (green)
-        plot(t_plot_sc, dt_seq, 'Color', [0, 0.6, 0], 'LineWidth', 0.5, ...
-             'DisplayName', 'delta t (between 2 logged samples)');
-    
-        % --- 2. Estimator Time Slip (time slip) ---
-        % Python: data['time_slip']*1e6
+        t_raw = double(sc.timestamp);
+        dt_seq = diff(t_raw);
+        t_plot_sc = t_raw(2:end) * 1e-6;
+
+        plot(t_plot_sc, dt_seq, sty.axis3_thin{:}, ...
+            'DisplayName', 'delta t (between 2 logged samples)');
+
         if isfield(log.data, 'estimator_status_0')
             es = log.data.estimator_status_0;
             t_es = double(es.timestamp) * 1e-6;
-            
-            % Convert seconds to microseconds
             slip_us = double(es.time_slip) * 1e6;
-            
-            % Plot curve (orange)
-            plot(t_es, slip_us, 'Color', [0.9, 0.5, 0], 'LineWidth', 1.5, ...
-                 'DisplayName', 'Estimator time slip (cumulative)');
+
+            plot(t_es, slip_us, sty.axis4_bold{:}, ...
+                'DisplayName', 'Estimator time slip (cumulative)');
         end
-    
-        % --- Style settings ---
-        grid on; legend('show', 'Location', 'best');
-        ylabel('[us]'); 
+
+        grid on;
+        legend('show', 'Location', 'best');
+        ylabel('[us]');
         title('Sampling Regularity of Sensor Data');
         xlabel('Time (s)');
         
@@ -1226,5 +1166,80 @@ if verbose
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % PlotToFile(gcf, 'results/Sampling_Regularity.png', 20, 10);
     end
+end
 
+%% =========================================================================
+%  Local functions
+% =========================================================================
+function sty = make_plot_style()
+    % -------- Core pair used in Fig.1-5 --------
+    sty.c_setpoint = [0.12, 0.12, 0.12];
+    sty.c_response = [0.70, 0.22, 0.40];
+
+    % -------- Multi-signal palette --------
+    sty.c_axis1 = [0.00, 0.447, 0.741];
+    sty.c_axis2 = [0.850, 0.325, 0.098];
+    sty.c_axis3 = [0.466, 0.674, 0.188];
+    sty.c_axis4 = [0.494, 0.184, 0.556];
+    sty.c_axis5 = [0.929, 0.694, 0.125];
+    sty.c_axis6 = [0.301, 0.745, 0.933];
+    sty.c_axis7 = [0.635, 0.078, 0.184];
+
+    % -------- Line widths --------
+    sty.lw_sp = 0.9;
+    sty.lw_res = 1.1;
+    sty.lw_main = 1.0;
+    sty.lw_main_bold = 1.3;
+    sty.lw_thin = 0.6;
+    sty.lw_multi = 0.9;
+    sty.lw_multi_bold = 1.2;
+
+    % -------- Frequently used styles --------
+    sty.setpoint = {'Color', sty.c_setpoint, 'LineStyle', '--', 'LineWidth', sty.lw_sp};
+    sty.response = {'Color', sty.c_response, 'LineStyle', '-',  'LineWidth', sty.lw_res};
+    sty.response_fade = {'Color', [0.70, 0.22, 0.40, 0.45], 'LineStyle', '-', 'LineWidth', sty.lw_main};
+
+    sty.axis1 = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.axis2 = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.axis3 = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.axis4 = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.axis5 = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+
+    sty.axis1_bold = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+    sty.axis2_bold = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+    sty.axis3_bold = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+    sty.axis4_bold = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+    sty.axis5_bold = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+
+    sty.axis1_thin = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
+    sty.axis2_thin = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
+    sty.axis3_thin = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
+
+    sty.axis1_dash = {'Color', sty.c_axis1, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
+    sty.axis2_dash = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
+    sty.axis4_dot  = {'Color', sty.c_axis4, 'LineStyle', ':',  'LineWidth', sty.lw_main};
+
+    sty.aux1 = {'Color', sty.c_axis4, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
+
+    sty.thrust = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '-',  'LineWidth', sty.lw_main_bold};
+    sty.thrust_alt = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '--', 'LineWidth', sty.lw_main};
+    sty.thrust_bold = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '-', 'LineWidth', 1.4};
+
+    sty.fill_warn = [1.00, 0.85, 0.85];
+end
+
+function cols = make_channel_colors(n, sty)
+    base = [sty.c_axis1;
+        sty.c_axis2;
+        sty.c_axis3;
+        sty.c_axis4;
+        sty.c_axis5;
+        sty.c_axis6;
+        sty.c_axis7];
+
+    if n <= size(base,1)
+        cols = base(1:n, :);
+    else
+        cols = lines(n);
+    end
 end
