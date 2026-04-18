@@ -26,7 +26,7 @@ function [intervals, state_names] = get_vtol_state_intervals(status_topic)
     state_names = {};
     
     map = containers.Map('KeyType', 'double', 'ValueType', 'char');
-    map(1) = 'Hover'; map(2) = 'FW'; map(3) = 'Trans';
+    map(1) = 'H'; map(2) = 'FW'; map(3) = 'T';
     
     for i = 1:length(changes)
         idx_s = changes(i);

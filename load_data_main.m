@@ -13,7 +13,7 @@ get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
 % Specify filename here (can be relative path 'data/09_49_18' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/20_00_18'; % Supports with or without extension
+specifiedFileName = 'data/12_58_31'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -423,9 +423,23 @@ end
 
 % 2.10 TECS Status (New: Parse TECS altitude rate)
 if isfield(log.data, 'tecs_status_0')
-    tecs_h_rate = log.data.tecs_status_0.height_rate;
-    tecs_h_rate_sp = log.data.tecs_status_0.height_rate_setpoint;
-    
+    tecs_t = get_t(log.data.tecs_status_0);
+    altitude_sp= log.data.tecs_status_0.altitude_sp;
+    altitude_reference= log.data.tecs_status_0.altitude_reference;
+    height_rate_reference= log.data.tecs_status_0.height_rate_reference;
+    height_rate_direct= log.data.tecs_status_0.height_rate_direct;
+    height_rate_setpoint= log.data.tecs_status_0.height_rate_setpoint;
+    height_rate= log.data.tecs_status_0.height_rate;
+    equivalent_airspeed_sp= log.data.tecs_status_0.equivalent_airspeed_sp;
+    true_airspeed_sp= log.data.tecs_status_0.true_airspeed_sp;
+    true_airspeed_filtered= log.data.tecs_status_0.true_airspeed_filtered;
+    true_airspeed_derivative_sp= log.data.tecs_status_0.true_airspeed_derivative_sp;
+    true_airspeed_derivative= log.data.tecs_status_0.true_airspeed_derivative;
+    true_airspeed_derivative_raw= log.data.tecs_status_0.true_airspeed_derivative_raw;
+    total_energy_rate_sp= log.data.tecs_status_0.total_energy_rate_sp;
+    total_energy_rate= log.data.tecs_status_0.total_energy_rate;
+    total_energy_balance_rate_sp= log.data.tecs_status_0.total_energy_balance_rate_sp;
+    total_energy_balance_rate= log.data.tecs_status_0.total_energy_balance_rate;
 end
 
 %% =========================================================================
@@ -762,6 +776,13 @@ if isfield(log.data, 'cpuload_0')
     cpu_load = log.data.cpuload_0.load;
     ram_usage = log.data.cpuload_0.ram_usage;
 end
+
+% 2.24 airspeed
+if isfield(log.data, 'airspeed_validated_0')
+    airspeed_t = get_t(log.data.airspeed_validated_0);
+    cairspeed_m_s = log.data.airspeed_validated_0.true_airspeed_m_s;
+ end
+
 
 
 save('flight_data.mat')

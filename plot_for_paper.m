@@ -48,18 +48,18 @@ if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', '
     ylabels = {'p (deg/s)', 'q (deg/s)', 'r (deg/s)'};
     ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;step = 20;
-        plot(vehicle_rates_setpoint_t(1:step:end), vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});step = 1;
+        ax(i) = subplot(3,1,i); hold on;step = 30;
+        plot(vehicle_rates_setpoint_t(1:step:end), vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});step = 30;
         plot(vehicle_angular_velocity_t(1:step:end), vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)');% title(titles{i});
+        grid on; ylabel(ylabels{i}); % title(titles{i});
         if i==1, legend('Setpoint', 'Response', 'Location', 'best'); end
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
         % lines = findobj(gca, 'Type', 'line');
         % uistack(lines, 'top');
         
     end
-    linkaxes(ax, 'x'); 
-    PlotToFile(gcf, 'results/rates.pdf', 12, 6.8);
+    linkaxes(ax, 'x'); xlabel('Time (s)');
+    % PlotToFile(gcf, 'results/rates.pdf', 12, 6.8);
 end
 
 % --- Figure 2: Attitude ---
@@ -77,12 +77,12 @@ if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
         ax(i) = subplot(3,1,i); hold on;step = 10;
         plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});step = 1;
         plot(vehicle_attitude_t(1:step:end), d_res{i}*r2d, STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)'); %title(titles{i}); 
-        if i==1, legend('Setpoint','Response','Location', 'best'); end
+        grid on; ylabel(ylabels{i});  %title(titles{i}); 
+        if i==1, legend('Setpoint','Response', 'Location', 'best'); end
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
-    linkaxes(ax, 'x'); 
-    PlotToFile(gcf, 'results/att.pdf', 12, 6.8);
+    linkaxes(ax, 'x'); xlabel('Time (s)');
+    % PlotToFile(gcf, 'results/att.pdf', 12, 6.8);
 end
 
 % --- Figure 3: Velocity ---
@@ -101,55 +101,92 @@ end
 %     linkaxes(ax, 'x'); xlabel('Time (s)');
 % end
 
-% --- Figure 3: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
+% --- Figure 3a: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
 if exist('V_XYZ', 'var')
     figure('Name', 'Velocity', 'Color', 'w');  
-
-    % 1. Determine if 4th subplot is needed
-    has_tecs = exist('tecs_h_rate', 'var');
-    if has_tecs
-        n_rows = 4; % Has TECS -> 4 rows
-    else
-        n_rows = 3; % No TECS -> 3 rows
-    end
-
+    n_rows = 3;
     ax = [];
 
     % --- Subplot 1: Velocity X ---
     ax(1) = subplot(n_rows, 1, 1); hold on;
     if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,1), STYLE_RES{:});
-    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)'); %title('Velocity X');
-    if exist('V_XYZ_setpoint', 'var'), legend('Setpoint', 'Response', 'Location', 'best'); end
+    grid on; ylabel('$v_x$ (m/s)');  %title('Velocity X');
     add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
     % --- Subplot 2: Velocity Y ---
     ax(2) = subplot(n_rows, 1, 2); hold on;
     if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,2), STYLE_RES{:});
-    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)'); %title('Velocity Y');
+    grid on; ylabel('$v_y$ (m/s)');  %title('Velocity Y');
     add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
     % --- Subplot 3: Velocity Z ---
     ax(3) = subplot(n_rows, 1, 3); hold on;
     if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,3), STYLE_RES{:});
-    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)'); %title('Velocity Z');
+    if exist('V_XYZ_setpoint', 'var'), legend('Setpoint', 'Response', 'Location', 'southwest','NumColumns',2); end
+    grid on; ylabel('$v_z$ (m/s)');  %title('Velocity Z');
     add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    % --- Subplot 4: TECS Height Rate (Only plotted if exists) ---
-    if has_tecs
-        ax(4) = subplot(n_rows, 1, 4); hold on;
-        plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate_sp, STYLE_SP{:});
-        plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate, STYLE_RES{:});
-        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)'); %title('TECS Height Rate');
-        % legend('$\dot{h}_r$', '$\dot{h}$', 'Location', 'best');
-        % legend('Setpoint', 'Response', 'Location', 'best');
-        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    end
 
-    linkaxes(ax, 'x');  
-    PlotToFile(gcf, 'results/vel.pdf', 12, 9.5);
+
+    linkaxes(ax, 'x');  xlabel('Time (s)');
+    % PlotToFile(gcf, 'results/vel.pdf', 12, 6.8);
+end
+
+% --- Subplot 3b: TECS Height Rate (Only plotted if exists) ---
+if exist('tecs_t', 'var')
+    figure('Name', 'tecs', 'Color', 'w');  
+    n_rows = 5;
+    ax = [];
+    ax(1) = subplot(n_rows, 1, 1); hold on;
+    % plot(tecs_t, altitude_sp);
+    plot(tecs_t, height_rate_reference, sty.axis2_dash{:});
+    plot(tecs_t, height_rate_direct);
+    plot(tecs_t, height_rate_setpoint, STYLE_SP{:});
+    plot(tecs_t, height_rate, STYLE_RES{:});
+    grid on; ylabel('$\dot{h}$ (m/s)');  %title('TECS Height Rate');
+    % legend('$\dot{h}_r$', '$\dot{h}$', 'Location', 'best');
+    legend('height rate reference', 'height rate direct','height rate setpoint','height rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(2) = subplot(n_rows, 1, 2); hold on;
+    plot(tecs_t, equivalent_airspeed_sp);
+    plot(tecs_t, true_airspeed_sp, STYLE_SP{:});
+    plot(tecs_t, true_airspeed_filtered, STYLE_RES{:});
+    grid on; ylabel('$V_a$ (m/s)');  %title('TECS airspeed');
+    % legend('$V_{a,d}$', '$V_a$', 'Location', 'best');
+    legend('equivalent airspeed sp', 'true airspeed sp', 'true airspeed filtered', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(3) = subplot(n_rows, 1, 3); hold on;
+    plot(tecs_t, true_airspeed_derivative_sp);
+    plot(tecs_t, true_airspeed_derivative, STYLE_RES{:});
+    plot(tecs_t, true_airspeed_derivative_raw);
+    grid on; ylabel('$\dot{V}_a$ (m/s)'); xlabel('Time (s)'); %title('TECS airspeed_derivative');
+    % legend('$V_{a,d}$', '$V_a$', 'Location', 'best');
+    % legend('Setpoint', 'Response', 'Location', 'best','NumColumns',2);
+    legend('true airspeed derivative sp', 'true airspeed derivative', 'true airspeed derivative raw', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(4) = subplot(n_rows, 1, 4); hold on;
+    plot(tecs_t, total_energy_rate_sp, STYLE_RES{:});
+    plot(tecs_t, total_energy_rate);
+    grid on; ylabel('$\dot{E}$'); xlabel('Time (s)'); 
+    % legend('Setpoint', 'Response', 'Location', 'best','NumColumns',2);
+    legend('total_energy_rate_sp','total_energy_rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(5) = subplot(n_rows, 1, 5); hold on;
+    plot(tecs_t, total_energy_balance_rate_sp, STYLE_RES{:});
+    plot(tecs_t, total_energy_balance_rate);
+    grid on; ylabel('$\dot{B}$'); xlabel('Time (s)'); 
+    % legend('Setpoint', 'Response', 'Location', 'best','NumColumns',2);
+    legend('total energy balance rate sp','total energy balance rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    % PlotToFile(gcf, 'results/tecs.pdf', 12, 6.8);
 end
 
 % --- Figure 4: Position ---
@@ -162,29 +199,204 @@ if(exist('XYZ', 'var'))
         ax(i) = subplot(3,1,i); hold on;
         if has_sp, plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:}); end
         plot(vehicle_local_position_t, XYZ(:,i), STYLE_RES{:});
-        grid on; ylabel(ylabels{i}); xlabel('Time (s)');
-        if i==1
+        grid on; ylabel(ylabels{i});  
+        if i==3
             % title('Position'); 
-            legend('Setpoint','Response','Location', 'best'); 
+            legend('Setpoint','Response', 'Location', 'best','NumColumns',2); 
         end
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
-    linkaxes(ax, 'x'); 
-    PlotToFile(gcf, 'results/pos.pdf', 12, 6.8);
+    linkaxes(ax, 'x'); xlabel('Time (s)');
+    % PlotToFile(gcf, 'results/pos.pdf', 12, 6.8);
 end
 
+% %% =========================================================================
+% %  Trajectory  
+% % =========================================================================
+% if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
+%     figure('Name', 'Trajectory', 'Color', 'w');
+%     step = 10;
+%     plot3(XYZ_setpoint(1:step:end,2), XYZ_setpoint(1:step:end,1), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
+%     plot3(XYZ(:,2), XYZ(:,1), -XYZ(:,3), STYLE_RES{:});
+%     % title('Trajectory'); 
+%     xlabel('y (m)'); ylabel('x (m)'); zlabel('-z (m)'); grid on; view(45, 30);legend('Setpoint', 'Response', 'Location', [0.397851640472838 0.245923662405286 0.241278108465608 0.125550660792952]);
+%     % PlotToFile(gcf, 'results/traj.pdf', 8, 3.5);
+% end
+
 %% =========================================================================
-%  Trajectory  
+%  Trajectory colored by VTOL state
+%  FW gust region: [100, 170] s uses darker color
 % =========================================================================
-if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
-    figure('Name', 'Trajectory', 'Color', 'w');
-    step = 10;
-    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
-    plot3(XYZ(:,1), XYZ(:,2), -XYZ(:,3), STYLE_RES{:});
-    % title('Trajectory'); 
-    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)'); grid on; view(45, 30);legend('Setpoint', 'Response', 'Location', [0.397851640472838 0.245923662405286 0.241278108465608 0.125550660792952]);
-    PlotToFile(gcf, 'results/traj.pdf', 8, 3.5);
+if exist('XYZ', 'var') && exist('vehicle_local_position_t', 'var') && ...
+   exist('vis_is_vtol', 'var') && vis_is_vtol && ...
+   exist('vis_vtol_intervals', 'var') && ~isempty(vis_vtol_intervals)
+   
+    figure('Name', 'Trajectory by VTOL State', 'Color', 'w'); hold on;
+    
+    % --- setpoint trajectory ---
+    if exist('XYZ_setpoint', 'var')
+        step_sp = 10;
+        plot3(XYZ_setpoint(1:step_sp:end,2), ...
+              XYZ_setpoint(1:step_sp:end,1), ...
+             -XYZ_setpoint(1:step_sp:end,3), ...
+              STYLE_SP{:}, 'DisplayName', 'Setpoint');
+    end
+    
+    % --- gust interval in FW ---
+    gust_t0 = 100;
+    gust_t1 = 170;
+    
+    % --- colors aligned with draw_status_band(...,'vtol_state') and sty ---
+    c_hover    = [0.65, 0.75, 0.90]; % Hover 浅蓝
+    c_trans    = [1.00, 0.80, 0.50]; % Trans 浅橙
+    
+    c_fw_pre   = [0.466, 0.674, 0.188]; % FW (横风前) - sty.c_axis3 绿色
+    c_fw_gust  = [0.70,  0.22,  0.40];  % FW (横风段) - sty.c_response 紫红
+    c_fw_post  = [0.494, 0.184, 0.556]; % FW (横风后) - sty.c_axis4 紫色
+    
+    t_pos = vehicle_local_position_t(:);
+    
+    % legend flags
+    shown_hover    = false;
+    shown_trans    = false;
+    shown_fw_pre   = false;
+    shown_fw_gust  = false;
+    shown_fw_post  = false;
+    
+    for k = 1:size(vis_vtol_intervals, 1)
+        t_s = vis_vtol_intervals(k, 1);
+        t_e = vis_vtol_intervals(k, 2);
+        s   = vis_vtol_intervals(k, 3);
+        
+        % ---------------- Hover ----------------
+        if s == 1
+            idx = find(t_pos >= t_s & t_pos <= t_e);
+            if numel(idx) >= 2
+                if ~shown_hover
+                    plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                        'Color', c_hover, 'LineWidth', 0.5, 'LineStyle', '-', 'DisplayName', 'Hover');
+                    shown_hover = true;
+                else
+                    plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                        'Color', c_hover, 'LineWidth', 0.5, 'LineStyle', '-', 'HandleVisibility', 'off');
+                end
+            end
+            
+        % ---------------- FW ----------------
+        elseif s == 2
+            % part A: FW before gust
+            t1a = t_s;
+            t1b = min(t_e, gust_t0);
+            if t1b > t1a
+                idx = find(t_pos >= t1a & t_pos <= t1b);
+                if numel(idx) >= 2
+                    if ~shown_fw_pre
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_pre, 'LineWidth', 0.5, 'LineStyle', '--', 'DisplayName', 'FW (Pre-gust)');
+                        shown_fw_pre = true;
+                    else
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_pre, 'LineWidth', 0.5, 'LineStyle', '--', 'HandleVisibility', 'off');
+                    end
+                end
+            end
+            
+            % part B: FW with gust
+            t2a = max(t_s, gust_t0);
+            t2b = min(t_e, gust_t1);
+            if t2b > t2a
+                idx = find(t_pos >= t2a & t_pos <= t2b);
+                if numel(idx) >= 2
+                    if ~shown_fw_gust
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_gust, 'LineWidth', 0.8, 'LineStyle', '-', 'DisplayName', 'FW (Gust)');
+                        shown_fw_gust = true;
+                    else
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_gust, 'LineWidth', 0.8, 'LineStyle', '-', 'HandleVisibility', 'off');
+                    end
+                end
+            end
+            
+            % part C: FW after gust
+            t3a = max(t_s, gust_t1);
+            t3b = t_e;
+            if t3b > t3a
+                idx = find(t_pos >= t3a & t_pos <= t3b);
+                if numel(idx) >= 2
+                    if ~shown_fw_post
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_post, 'LineWidth', 0.5, 'LineStyle', '--', 'DisplayName', 'FW (Post-gust)');
+                        shown_fw_post = true;
+                    else
+                        plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                            'Color', c_fw_post, 'LineWidth', 0.5, 'LineStyle', '--', 'HandleVisibility', 'off');
+                    end
+                end
+            end
+            
+        % ---------------- Transition ----------------
+        elseif s == 3
+            idx = find(t_pos >= t_s & t_pos <= t_e);
+            if numel(idx) >= 2
+                if ~shown_trans
+                    plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                        'Color', c_trans, 'LineWidth', 1, 'LineStyle', '-', 'DisplayName', 'Trans');
+                    shown_trans = true;
+                else
+                    plot3(XYZ(idx,2), XYZ(idx,1), -XYZ(idx,3), ...
+                        'Color', c_trans, 'LineWidth', 1, 'LineStyle', '-', 'HandleVisibility', 'off');
+                end
+            end
+        end
+    end
+    
+    % % optional markers
+    % plot3(XYZ(1,2),   XYZ(1,1),   -XYZ(1,3),   'ko', 'MarkerSize', 5, ...
+    %     'MarkerFaceColor', 'k', 'DisplayName', 'Start');
+    % 
+    % % 终点使用灰色方块，明确区分起点且视觉上不显得突兀
+    % plot3(XYZ(end,2), XYZ(end,1), -XYZ(end,3), 's', 'MarkerSize', 6, ...
+    %     'MarkerEdgeColor', [0.4, 0.4, 0.4], ...
+    %     'MarkerFaceColor', [0.7, 0.7, 0.7], ...
+    %     'DisplayName', 'End');
+    % start / end
+    plot3(XYZ(1,2), XYZ(1,1), -XYZ(1,3), 'ko', 'MarkerSize', 5, ...
+        'MarkerFaceColor', 'k', 'DisplayName', 'Start');
+
+    plot3(XYZ(end,2), XYZ(end,1), -XYZ(end,3), 's', 'MarkerSize', 6, ...
+        'MarkerEdgeColor', [0.4, 0.4, 0.4], ...
+        'MarkerFaceColor', [0.7, 0.7, 0.7], ...
+        'DisplayName', 'End');
+
+    % gust entry / exit
+    [~, idx_gust_in]  = min(abs(t_pos - gust_t0));
+    [~, idx_gust_out] = min(abs(t_pos - gust_t1));
+
+    plot3(XYZ(idx_gust_in,2), XYZ(idx_gust_in,1), -XYZ(idx_gust_in,3), ...
+        'd', 'MarkerSize', 7, ...
+        'MarkerEdgeColor', [0.25, 0.25, 0.25], ...
+        'MarkerFaceColor', c_fw_gust, ...
+        'LineWidth', 0.8, ...
+        'DisplayName', 'Gust entry');
+
+    plot3(XYZ(idx_gust_out,2), XYZ(idx_gust_out,1), -XYZ(idx_gust_out,3), ...
+        'p', 'MarkerSize', 8, ...
+        'MarkerEdgeColor', [0.25, 0.25, 0.25], ...
+        'MarkerFaceColor', c_fw_post, ...
+        'LineWidth', 0.8, ...
+        'DisplayName', 'Gust exit');
+
+    xlabel('y (m)');
+    ylabel('x (m)');
+    zlabel('-z (m)');
+    grid on;
+    view([31.6 26.3]);
+    legend('Location', 'eastoutside');
+    % PlotToFile(gcf, 'results/traj.png', 12, 5);
 end
+
+
 
 %% =========================================================================
 %  Control figures
@@ -1165,26 +1377,26 @@ function sty = make_plot_style()
     % -------- Frequently used styles --------
     sty.setpoint = {'Color', sty.c_setpoint, 'LineStyle', '--', 'LineWidth', sty.lw_sp};
     sty.response = {'Color', sty.c_response, 'LineStyle', '-',  'LineWidth', sty.lw_res};
-    sty.response_fade = {'Color', [0.70, 0.22, 0.40, 0.45], 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.response_fade = {'Color', [0.70, 0.22, 0.40, 0.45], 'LineStyle', '-.', 'LineWidth', sty.lw_main};
 
     sty.axis1 = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis2 = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis3 = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis4 = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main};
+    sty.axis2 = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_main};
+    sty.axis3 = {'Color', sty.c_axis3, 'LineStyle', '-.', 'LineWidth', sty.lw_main};
+    sty.axis4 = {'Color', sty.c_axis4, 'LineStyle', ':', 'LineWidth', sty.lw_main};
     sty.axis5 = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main};
 
     sty.axis1_bold = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis2_bold = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis3_bold = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis4_bold = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
+    sty.axis2_bold = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_main_bold};
+    sty.axis3_bold = {'Color', sty.c_axis3, 'LineStyle', '-.', 'LineWidth', sty.lw_main_bold};
+    sty.axis4_bold = {'Color', sty.c_axis4, 'LineStyle', ':', 'LineWidth', sty.lw_main_bold};
     sty.axis5_bold = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
 
     sty.axis1_thin = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
-    sty.axis2_thin = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
-    sty.axis3_thin = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
+    sty.axis2_thin = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
+    sty.axis3_thin = {'Color', sty.c_axis3, 'LineStyle', '-.', 'LineWidth', sty.lw_thin};
 
     sty.axis1_dash = {'Color', sty.c_axis1, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
-    sty.axis2_dash = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
+    sty.axis2_dash = {'Color', sty.c_axis2, 'LineStyle', '-.', 'LineWidth', sty.lw_thin};
     sty.axis4_dot  = {'Color', sty.c_axis4, 'LineStyle', ':',  'LineWidth', sty.lw_main};
 
     sty.aux1 = {'Color', sty.c_axis4, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
@@ -1209,5 +1421,17 @@ function cols = make_channel_colors(n, sty)
         cols = base(1:n, :);
     else
         cols = lines(n);
+    end
+end
+
+
+function idx_out = subsample_idx(idx_in, step)
+    if isempty(idx_in)
+        idx_out = idx_in;
+        return;
+    end
+    idx_out = idx_in(1:step:end);
+    if idx_out(end) ~= idx_in(end)
+        idx_out = [idx_out; idx_in(end)];
     end
 end
