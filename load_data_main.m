@@ -11,9 +11,9 @@ d2r = pi/180;
 r2d = 180/pi;
 get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
-% Specify filename here (can be relative path 'data/09_49_18' or absolute path)
+% Specify filename here (can be relative path 'data/09_29_53' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/12_58_31'; % Supports with or without extension
+specifiedFileName = 'data/13_31_44.ulg'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -184,6 +184,7 @@ if(isfield(log.data, 'vehicle_local_position_0'))
     XYZ = [log.data.vehicle_local_position_0.x, log.data.vehicle_local_position_0.y, log.data.vehicle_local_position_0.z];
     V_XYZ = [log.data.vehicle_local_position_0.vx, log.data.vehicle_local_position_0.vy, log.data.vehicle_local_position_0.vz];
     vehicle_local_position_t = get_t(log.data.vehicle_local_position_0);
+    ref_alt=log.data.vehicle_local_position_0.ref_alt;
     if length(vehicle_local_position_t) > 1
         dt = mean(diff(vehicle_local_position_t));
         fprintf('Position/velocity sampling period: %f (ms), frequency: %f (Hz) \n', dt*1000, 1/dt);

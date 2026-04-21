@@ -1,90 +1,149 @@
 function test_plot_style_manager()
-    sty = local_make_plot_style();
-    t = linspace(0, 10, 400);
 
-    figure('Name', 'Style Manager Test', 'Color', 'w');
+set(groot, ...
+    'defaultAxesFontSize', 11, ...
+    'defaultAxesFontName', 'Times New Roman', ...
+    'defaultAxesLineWidth', 0.5, ...
+    'defaultAxesLabelFontSizeMultiplier', 1, ...
+    'defaultAxesTitleFontSizeMultiplier', 1);
 
-    subplot(2,1,1); hold on;
-    plot(t, sin(t),             sty.setpoint{:},  'DisplayName', 'sty.setpoint');
-    plot(t, sin(t + 0.15),      sty.response{:},  'DisplayName', 'sty.response');
-    plot(t, 0.8*cos(t),         sty.reference{:}, 'DisplayName', 'sty.reference');
-    plot(t, 0.8*cos(t + 0.2),   sty.estimate{:},  'DisplayName', 'sty.estimate');
-    plot(t, 0.5*sin(2*t),       sty.raw{:},       'DisplayName', 'sty.raw');
-    plot(t, 0.5*cos(2*t),       sty.command{:},   'DisplayName', 'sty.command');
-    plot(t, 0.3*sin(3*t),       sty.state{:},     'DisplayName', 'sty.state');
-    plot(t, 0.3*cos(3*t),       sty.auxiliary{:}, 'DisplayName', 'sty.auxiliary');
-    plot(t, 0.2*sin(4*t),       sty.event{:},     'DisplayName', 'sty.event');
-    grid on; xlabel('Time (s)'); ylabel('Amplitude');
-    title('Semantic foreground styles');
-    legend('show', 'Location', 'eastoutside');
+sty = plot_style_manager();
+t = linspace(0, 40, 1200);
 
-    subplot(2,1,2); hold on;
-    plot(t, 1.00 + 0*t, sty.axis1{:},      'DisplayName', 'sty.axis1');
-    plot(t, 0.85 + 0*t, sty.axis2{:},      'DisplayName', 'sty.axis2');
-    plot(t, 0.70 + 0*t, sty.axis3{:},      'DisplayName', 'sty.axis3');
-    plot(t, 0.55 + 0*t, sty.axis4{:},      'DisplayName', 'sty.axis4');
-    plot(t, 0.40 + 0*t, sty.axis5{:},      'DisplayName', 'sty.axis5');
-    plot(t, 0.25 + 0*t, sty.axis1_bold{:}, 'DisplayName', 'sty.axis1_bold');
-    plot(t, 0.10 + 0*t, sty.axis3_thin{:}, 'DisplayName', 'sty.axis3_thin');
-    plot(t,-0.05 + 0*t, sty.thrust{:},     'DisplayName', 'sty.thrust');
-    plot(t,-0.20 + 0*t, sty.thrust_alt{:}, 'DisplayName', 'sty.thrust_alt');
-    plot(t,-0.35 + 0*t, sty.thrust_bold{:},'DisplayName', 'sty.thrust_bold');
-    ylim([-0.5, 1.1]);
-    grid on; xlabel('Time (s)'); ylabel('Style preview');
-    title('Legacy compatibility styles');
-    legend('show', 'Location', 'eastoutside');
+% =====================================================================
+% Figure 1: real plotting workflow using add_standard_background
+% =====================================================================
+figure('Name', 'Integrated Background Test', 'Color', 'w');
+hold on;
+
+% synthetic signals
+u_sp1  = 0.90 + 0.10 * sin(0.35 * t);
+u_res1 = 0.90 + 0.08 * sin(0.35 * t - 0.25) + 0.015 * sin(1.8 * t);
+
+u_sp2  = 0.45 + 0.07 * square(0.22 * t);
+u_res2 = 0.45 + 0.05 * square(0.22 * t - 0.18) + 0.012 * cos(1.6 * t);
+
+u_sp3  = -0.05 + 0.14 * sin(0.17 * t + 0.9);
+u_res3 = -0.05 + 0.12 * sin(0.17 * t + 0.55) + 0.01 * sin(2.3 * t);
+
+u_sp4  = -0.55 + 0.05 * sawtooth(0.24 * t, 0.5);
+u_res4 = -0.55 + 0.04 * sawtooth(0.24 * t - 0.1, 0.5) + 0.01 * cos(1.9 * t);
+
+s = plot_style(sty, 'setpoint1', '--', 1.0);
+plot(t, u_sp1, s{:}, 'DisplayName', 'setpoint1');
+s = plot_style(sty, 'response1', '-', 1.2);
+plot(t, u_res1, s{:}, 'DisplayName', 'response1');
+s = plot_style(sty, 'setpoint4', ':', 0.9);
+plot(t, u_sp2, s{:}, 'DisplayName', 'setpoint4');
+s = plot_style(sty, 'response4', '-.', 1.1);
+plot(t, u_res2, s{:}, 'DisplayName', 'response4');
+s = plot_style(sty, 'setpoint7', '--', 0.8);
+plot(t, u_sp3, s{:}, 'DisplayName', 'setpoint7');
+s = plot_style(sty, 'response7', '-', 1.0);
+plot(t, u_res3, s{:}, 'DisplayName', 'response7');
+s = plot_style(sty, 'setpoint10', ':', 0.8);
+plot(t, u_sp4, s{:}, 'DisplayName', 'setpoint10');
+s = plot_style(sty, 'response10', '-', 1.0);
+plot(t, u_res4, s{:}, 'DisplayName', 'response10');
+
+flight_intervals = [ ...
+     0   4   0; ...
+     4   8   1; ...
+     8  11   2; ...
+    11  14  10; ...
+    14  18  17; ...
+    18  22  22; ...
+    22  26  18; ...
+    26  30  20; ...
+    30  33   5; ...
+    33  36   3; ...
+    36  38   4; ...
+    38  40  14];
+
+flight_labels = { ...
+    'flight 0', 'flight 1', 'flight 2', 'flight 10', ...
+    'flight 17', 'flight 22', 'flight 18', 'flight 20', ...
+    'flight 5', 'flight 3', 'flight 4', 'flight 14'};
+
+vtol_intervals = [ ...
+     0  12   1; ...
+    12  27   2; ...
+    27  34   3; ...
+    34  40   2];
+
+vtol_labels = {'vtol 1', 'vtol 2', 'vtol 3', 'vtol 2'};
+
+add_standard_background(flight_intervals, flight_labels, true, vtol_intervals, vtol_labels);
+
+xlim([0, 40]);
+ylim([-1.05, 1.10]);
+grid on;
+xlabel('Time (s)');
+ylabel('Signal');
+title('Integrated test: lines + add_standard_background');
+legend('show', 'Location', 'eastoutside');
+set(gca, 'Layer', 'top');
+
+% =====================================================================
+% Figure 2: all named foreground colors
+% =====================================================================
+figure('Name', 'Foreground Color Palette', 'Color', 'w');
+tiledlayout(2,1, 'Padding', 'compact', 'TileSpacing', 'compact');
+
+nexttile; hold on;
+for k = 1:10
+    y = 11 - k;
+    s = plot_style(sty, sprintf('setpoint%d', k), '-', 1.5);
+    plot([0, 1], [y, y], s{:}, 'DisplayName', sprintf('setpoint%d', k));
 end
+xlim([0, 1]); ylim([0.5, 10.5]); grid on;
+title('setpoint1 ... setpoint10');
+legend('show', 'Location', 'eastoutside');
 
-function sty = local_make_plot_style()
-    sty.c_setpoint = [0.12, 0.12, 0.12];
-    sty.c_response = [0.70, 0.22, 0.40];
-    sty.c_ref      = [0.00, 0.447, 0.741];
-    sty.c_est      = [0.850, 0.325, 0.098];
-    sty.c_raw      = [0.466, 0.674, 0.188];
-    sty.c_cmd      = [0.494, 0.184, 0.556];
-    sty.c_state    = [0.929, 0.694, 0.125];
-    sty.c_aux      = [0.301, 0.745, 0.933];
-    sty.c_event    = [0.635, 0.078, 0.184];
-    sty.c_black    = [0.10, 0.10, 0.10];
+nexttile; hold on;
+for k = 1:10
+    y = 11 - k;
+    s = plot_style(sty, sprintf('response%d', k), '-', 1.5);
+    plot([0, 1], [y, y], s{:}, 'DisplayName', sprintf('response%d', k));
+end
+xlim([0, 1]); ylim([0.5, 10.5]); grid on;
+title('response1 ... response10');
+legend('show', 'Location', 'eastoutside');
 
-    sty.lw_xs = 0.5;
-    sty.lw_s  = 0.7;
-    sty.lw_m  = 0.9;
-    sty.lw_l  = 1.1;
-    sty.lw_xl = 1.4;
+% =====================================================================
+% Figure 3: all background color definitions
+% =====================================================================
+figure('Name', 'Background Color Palette', 'Color', 'w');
+tiledlayout(2,1, 'Padding', 'compact', 'TileSpacing', 'compact');
 
-    sty.lw_sp         = sty.lw_m;
-    sty.lw_res        = sty.lw_xs;
-    sty.lw_main       = sty.lw_m;
-    sty.lw_main_bold  = sty.lw_l;
-    sty.lw_thin       = sty.lw_xs;
-    sty.lw_multi      = sty.lw_m;
-    sty.lw_multi_bold = sty.lw_xl;
+nexttile; hold on;
+flight_vals = [0, 15, 1, 2, 10, 17, 22, 18, 20, 5, 3, 4, 14];
+for k = 1:numel(flight_vals)
+    v = flight_vals(k);
+    x0 = k - 1;
+    patch([x0, x0+1, x0+1, x0], [0, 0, 1, 1], sty.color.(sprintf('flight_mode_%d', v)), ...
+        'EdgeColor', 'none', 'FaceAlpha', sty.bg.flight_mode.alpha);
+    text(x0 + 0.5, 0.5, sprintf('fm %d', v), 'HorizontalAlignment', 'center', ...
+        'VerticalAlignment', 'middle', 'FontSize', 9, 'Interpreter', 'none');
+end
+xlim([0, numel(flight_vals)]); ylim([0, 1]);
+set(gca, 'YTick', [], 'XTick', []);
+title('flight_mode background colors');
+box on;
 
-    sty.setpoint  = {'Color', sty.c_setpoint, 'LineStyle', '--', 'LineWidth', sty.lw_sp};
-    sty.response  = {'Color', sty.c_response, 'LineStyle', '-',  'LineWidth', sty.lw_res};
-    sty.reference = {'Color', sty.c_ref,      'LineStyle', '--', 'LineWidth', sty.lw_s};
-    sty.estimate  = {'Color', sty.c_est,      'LineStyle', '-',  'LineWidth', sty.lw_m};
-    sty.raw       = {'Color', sty.c_raw,      'LineStyle', ':',  'LineWidth', sty.lw_xs};
-    sty.command   = {'Color', sty.c_cmd,      'LineStyle', '-.', 'LineWidth', sty.lw_m};
-    sty.state     = {'Color', sty.c_state,    'LineStyle', '-',  'LineWidth', sty.lw_l};
-    sty.auxiliary = {'Color', sty.c_aux,      'LineStyle', '--', 'LineWidth', sty.lw_xs};
-    sty.event     = {'Color', sty.c_event,    'LineStyle', ':',  'LineWidth', sty.lw_l};
+nexttile; hold on;
+vtol_vals = [1, 2, 3];
+for k = 1:numel(vtol_vals)
+    v = vtol_vals(k);
+    x0 = k - 1;
+    patch([x0, x0+1, x0+1, x0], [0, 0, 1, 1], sty.color.(sprintf('vtol_state_%d', v)), ...
+        'EdgeColor', 'none', 'FaceAlpha', sty.bg.vtol_state.alpha);
+    text(x0 + 0.5, 0.5, sprintf('vtol %d', v), 'HorizontalAlignment', 'center', ...
+        'VerticalAlignment', 'middle', 'FontSize', 9, 'Interpreter', 'none');
+end
+xlim([0, numel(vtol_vals)]); ylim([0, 1]);
+set(gca, 'YTick', [], 'XTick', []);
+title('vtol_state background colors');
+box on;
 
-    sty.c_axis1 = sty.c_ref;
-    sty.c_axis2 = sty.c_est;
-    sty.c_axis3 = sty.c_raw;
-    sty.c_axis4 = sty.c_cmd;
-    sty.c_axis5 = sty.c_state;
-
-    sty.axis1 = {'Color', sty.c_axis1, 'LineStyle', '-',  'LineWidth', sty.lw_main};
-    sty.axis2 = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_main};
-    sty.axis3 = {'Color', sty.c_axis3, 'LineStyle', '-.', 'LineWidth', sty.lw_main};
-    sty.axis4 = {'Color', sty.c_axis4, 'LineStyle', ':',  'LineWidth', sty.lw_main};
-    sty.axis5 = {'Color', sty.c_axis5, 'LineStyle', '-',  'LineWidth', sty.lw_main};
-    sty.axis1_bold = {'Color', sty.c_axis1, 'LineStyle', '-',  'LineWidth', sty.lw_main_bold};
-    sty.axis3_thin = {'Color', sty.c_axis3, 'LineStyle', '-.', 'LineWidth', sty.lw_thin};
-    sty.thrust      = {'Color', sty.c_black, 'LineStyle', '-',  'LineWidth', sty.lw_main_bold};
-    sty.thrust_alt  = {'Color', sty.c_black, 'LineStyle', '--', 'LineWidth', sty.lw_main};
-    sty.thrust_bold = {'Color', sty.c_black, 'LineStyle', '-',  'LineWidth', sty.lw_xl};
 end
