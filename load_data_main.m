@@ -11,9 +11,9 @@ d2r = pi/180;
 r2d = 180/pi;
 get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
-% Specify filename here (can be relative path 'data/09_29_53' or absolute path)
+% Specify filename here (can be relative path 'data/09_49_18' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/13_31_44.ulg'; % Supports with or without extension
+specifiedFileName = 'data/09_49_18'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -52,6 +52,7 @@ else
     disp('No MAT file found, start parsing ULog...');
     
     % Define tool paths (please adjust according to actual situation)
+    % The base_path can be setup by `which Python` 
     if ismac
         base_path = '~/Library/Python/3.9/bin/'; 
         cmd_info = [base_path 'ulog_info'];

@@ -95,8 +95,6 @@ if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', '
         grid on; ylabel(ylabels{i}); % title(titles{i});
         if i==1, legend('Setpoint','Response','NumColumns',2, 'Location', 'best'); end
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-        % lines = findobj(gca, 'Type', 'line');
-        % uistack(lines, 'top');
         
     end
     linkaxes(ax, 'x'); xlabel('Time (s)');
@@ -125,22 +123,6 @@ if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
     linkaxes(ax, 'x'); xlabel('Time (s)');
     % PlotToFile(gcf, 'results/att.pdf', 12, 5);
 end
-
-% --- Figure 3: Velocity ---
-% if(exist('V_XYZ', 'var'))
-%     figure('Name', 'Velocity', 'Color', 'w'); 
-%     ylabels = {'V_X (m/s)', 'V_Y (m/s)', 'V_Z (m/s)'};
-%     has_sp = exist('V_XYZ_setpoint', 'var');
-%     ax = [];
-%     for i = 1:3
-%         ax(i) = subplot(3,1,i); hold on;
-%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), STYLE_SP{:}); end
-%         plot(vehicle_local_position_t, V_XYZ(:,i), STYLE_RES{:});
-%         grid on; ylabel(ylabels{i}); if i==1, title('Velocity'); legend('Setpoint','Response'); end
-%         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-%     end
-%     linkaxes(ax, 'x'); xlabel('Time (s)');
-% end
 
 % --- Figure 3a: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
 if exist('V_XYZ', 'var')
