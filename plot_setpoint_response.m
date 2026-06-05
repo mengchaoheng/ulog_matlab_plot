@@ -99,7 +99,7 @@ if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', '
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x');
-    PlotToFile(gcf, 'results/rates.png', 20, 20);
+    % PlotToFile(gcf, 'results/rates.png', 20, 20);
 end
 
 % --- Figure 2: Attitude ---
@@ -122,7 +122,7 @@ if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x');
-    PlotToFile(gcf, 'results/att.png', 20, 20);
+    % PlotToFile(gcf, 'results/att.png', 20, 20);
 end
 
 % --- Figure 3a: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
@@ -156,7 +156,7 @@ if exist('V_XYZ', 'var')
 
 
     linkaxes(ax, 'x');   
-    PlotToFile(gcf, 'results/vel.png', 20, 20);
+    % PlotToFile(gcf, 'results/vel.png', 20, 20);
 end
 
 % --- Subplot 3b: TECS Height Rate (Only plotted if exists) ---
@@ -218,7 +218,7 @@ if exist('tecs_t', 'var')
     legend('total energy balance rate sp','total energy balance rate', 'Location', 'best');
     add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    PlotToFile(gcf, 'results/tecs.pdf', 20, 24);
+    % PlotToFile(gcf, 'results/tecs.pdf', 20, 24);
 end
 
 % --- Figure 4: Position ---
@@ -239,7 +239,7 @@ if(exist('XYZ', 'var'))
         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x');   xlabel('Time (s)');
-    PlotToFile(gcf, 'results/pos.png', 20, 20);
+    % PlotToFile(gcf, 'results/pos.png', 20, 20);
 end
 
 %% =========================================================================
@@ -254,7 +254,7 @@ if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
     xlabel('y (m)'); ylabel('x (m)'); zlabel('z (m)');
     grid on; view(45, 30);
     legend('Setpoint', 'Response', 'Location', 'best');
-    PlotToFile(gcf, 'results/traj.png', 15, 15);
+    % PlotToFile(gcf, 'results/traj.png', 15, 15);
 end
 
 %% =========================================================================
@@ -358,7 +358,7 @@ if control_fig
         linkaxes(ax_all, 'x');
         xlabel(ax_all(end), 'Time (s)');
         sgtitle(layout_title);
-        PlotToFile(gcf, 'results/control.png', 20, 20);
+        % PlotToFile(gcf, 'results/control.png', 20, 20);
     end
 
     % ---------------------------------------------------------------------
@@ -448,7 +448,7 @@ if control_fig
                     if has_motor_data && has_servo_data
                         linkaxes([ax_m, ax_s], 'x');
                     end
-                    PlotToFile(gcf, 'results/motors_servos.png', 20, 20);
+                    % PlotToFile(gcf, 'results/motors_servos.png', 20, 20);
                 end
             end
 
@@ -491,7 +491,7 @@ if control_fig
                             set(gca, 'XTickLabel', []);
                         end
                     end
-                    PlotToFile(gcf, 'results/motors.png', 20, 20);
+                    % PlotToFile(gcf, 'results/motors.png', 20, 20);
                 end
             end
 
@@ -533,7 +533,7 @@ if control_fig
                             set(gca, 'XTickLabel', []);
                         end
                     end
-                    PlotToFile(gcf, 'results/servos.png', 20, 20);
+                    % PlotToFile(gcf, 'results/servos.png', 20, 20);
                 end
             end
         end
@@ -587,7 +587,7 @@ if control_fig
                 linkaxes(ax_list, 'x');
             end
             xlabel('Time (s)');
-            PlotToFile(gcf, 'results/PWM.png', 20, 20);
+            % PlotToFile(gcf, 'results/PWM.png', 20, 20);
         else
             fprintf('Figure 8 Skipped: No active PWM channels identified.\n');
         end
@@ -628,7 +628,7 @@ if control_fig
         end
 
         linkaxes(ax_raw, 'x');
-        PlotToFile(gcf, 'results/pwm.png', 20, 20);
+        % PlotToFile(gcf, 'results/pwm.png', 20, 20);
     end
 end
 

@@ -412,9 +412,10 @@ if exist('XYZ', 'var') && exist('vehicle_local_position_t', 'var') && ...
     ylabel('x (m)');
     zlabel('-z (m)');
     grid on;
-    view([23.4 46.9])
+    view([23.4 46.9]);
     legend('Location', 'eastoutside');
-    % PlotToFile(gcf, 'results/traj.png', 12, 4);
+    % view([35.9 52.8]);legend('NumColumns',2,'Position',[0.116270454663707 0.721150469145652 0.773058920704846 0.184746696035242]);
+    PlotToFile(gcf, 'results/traj.png', 8.4, 3);
 end
 
 
