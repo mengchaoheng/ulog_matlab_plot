@@ -2,7 +2,7 @@ clear all;
 close all;
 clc;
 
-run('load_data_main.m'); % load('flight_data.mat'); 20_00_18
+run('load_data_main.m'); % load('flight_data.mat'); 09_49_18
 addpath(genpath(pwd));
 
 %% =========================================================================
@@ -20,13 +20,54 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 set(0, 'DefaultAxesTickLabelInterpreter', 'latex');
 
 %% =========================================================================
-%  Unified style manager
+%  Unified named-color manager
 % =========================================================================
-sty = make_plot_style();
+sty = plot_style_manager();
 
-% 为兼容你原先 Figure 1-5 的写法，保留这两个名字
-STYLE_SP  = sty.setpoint;
-STYLE_RES = sty.response;
+% ---- Local line-width definition ----
+LW_XS = 0.5;
+LW_S  = 0.5;
+LW_M  = 0.7;
+LW_L  = 1.1;
+LW_XL = 1.4;
+
+LW_SP = LW_M;
+LW_RES = LW_S;
+LW_MAIN = LW_M;
+LW_MAIN_BOLD = LW_L;
+LW_MULTI = LW_M;
+LW_MULTI_BOLD = LW_XL;
+
+STYLE_SP  = plot_style(sty, 'setpoint1', '--', LW_SP);
+STYLE_RES = plot_style(sty, 'response1', '-',  LW_RES);
+STYLE_AXIS1 = plot_style(sty, 'setpoint2', '-',  LW_MAIN);
+STYLE_AXIS2 = plot_style(sty, 'response2', '--', LW_MAIN);
+STYLE_AXIS3 = plot_style(sty, 'setpoint3', '-.', LW_MAIN);
+STYLE_AXIS4 = plot_style(sty, 'response3', ':',  LW_MAIN);
+STYLE_AXIS5 = plot_style(sty, 'setpoint4', '-',  LW_MAIN);
+STYLE_AXIS1_BOLD = plot_style(sty, 'setpoint2', '-',  LW_MAIN_BOLD);
+STYLE_AXIS2_BOLD = plot_style(sty, 'response2', '--', LW_MAIN_BOLD);
+STYLE_AXIS3_BOLD = plot_style(sty, 'setpoint3', '-.', LW_MAIN_BOLD);
+STYLE_AXIS4_BOLD = plot_style(sty, 'response3', ':',  LW_MAIN_BOLD);
+STYLE_AXIS5_BOLD = plot_style(sty, 'setpoint4', '-',  LW_MAIN_BOLD);
+STYLE_AXIS1_THIN = plot_style(sty, 'setpoint2', '-',  LW_XS);
+STYLE_AXIS2_THIN = plot_style(sty, 'response2', '--', LW_XS);
+STYLE_AXIS3_THIN = plot_style(sty, 'setpoint3', '-.', LW_XS);
+STYLE_AXIS1_DASH = plot_style(sty, 'setpoint2', '--', LW_XS);
+STYLE_AXIS2_DASH = plot_style(sty, 'response2', '-.', LW_XS);
+STYLE_AXIS4_DOT  = plot_style(sty, 'response3', ':',  LW_MAIN);
+STYLE_THRUST     = plot_style(sty, 'neutral1', '-',  LW_MAIN_BOLD);
+STYLE_THRUST_ALT = plot_style(sty, 'neutral1', '--', LW_MAIN);
+STYLE_THRUST_BOLD = plot_style(sty, 'neutral1', '-', LW_XL);
+
+C_AXIS1 = sty.color.setpoint2;
+C_AXIS2 = sty.color.response2;
+C_AXIS3 = sty.color.setpoint3;
+C_AXIS4 = sty.color.response3;
+C_AXIS5 = sty.color.setpoint4;
+C_AXIS6 = sty.color.response4;
+C_AXIS7 = sty.color.setpoint5;
+COLOR_WARN_FILL = sty.color.warn_fill;
 
 %% =========================================================================
 %  Parameter settings
@@ -35,184 +76,182 @@ MAX_MOTORS = 12;
 MAX_SERVOS = 8;  
 plot_together = 0;   % 1: Servos and motors combined display, 0: independent display
 verbose = 0;         % 1: Display more diagnostics
-control_fig = 0;     % 1: Display control quantities
+control_fig = 1;     % 1: Display control quantities
 n_raw_plot = 8;      % For versions before 1.13, plot first 8 channels of pwm
 
 %% =========================================================================
-%  Figure 1 2, 3, 4, 5
+%  Figure 1 2, 3, 4, 5: (vehicle_angular_velocity, Attitude, Vel, Pos, Control)
 % =========================================================================
-
 % --- Figure 1: vehicle_angular_velocity ---
-if exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var')
+if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', 'var'))
     figure('Name', 'Rates', 'Color', 'w');
+    % titles = {'Roll Rate', 'Pitch Rate', 'Yaw Rate'};
     ylabels = {'p (deg/s)', 'q (deg/s)', 'r (deg/s)'};
-    ax = gobjects(1,3);
-
+    ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;
-
-        step = 20;
-        plot(vehicle_rates_setpoint_t(1:step:end), ...
-             vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});
-
-        step = 1;
-        plot(vehicle_angular_velocity_t(1:step:end), ...
-             vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
-
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
+        ax(i) = subplot(3,1,i); hold on;step = 30;
+        plot(vehicle_rates_setpoint_t(1:step:end), vehicle_rates_setpoint(1:step:end,i)*r2d, STYLE_SP{:});step = 30;
+        plot(vehicle_angular_velocity_t(1:step:end), vehicle_angular_velocity(1:step:end,i)*r2d, STYLE_RES{:});
+        grid on; ylabel(ylabels{i}); xlabel('Time (s)'); %title(titles{i}); 
         if i == 1
             legend('Setpoint', 'Response', 'Location', 'best');
         end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x');
     % PlotToFile(gcf, 'results/rates.png', 20, 20);
 end
 
 % --- Figure 2: Attitude ---
-if exist('Roll', 'var') && exist('Roll_setpoint', 'var')
-    figure('Name', 'Attitude', 'Color', 'w');
-
-    step = 10;
-    d_sp  = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};
-    step = 1;
+if(exist('Roll', 'var') && exist('Roll_setpoint', 'var'))
+    figure('Name', 'Attitude', 'Color', 'w');step = 10;
+    d_sp = {Roll_setpoint(1:step:end), Pitch_setpoint(1:step:end), Yaw_setpoint(1:step:end)};step = 1;
     d_res = {Roll(1:step:end), Pitch(1:step:end), Yaw(1:step:end)};
+    % titles = {'Roll', 'Pitch', 'Yaw'};
 
+    % \varphi corresponds to Roll, \theta corresponds to Pitch, \phi corresponds to Yaw
     ylabels = {'$\varphi$ (deg)', '$\theta$ (deg)', '$\phi$ (deg)'};
-    ax = gobjects(1,3);
 
+    ax = [];
     for i = 1:3
-        ax(i) = subplot(3,1,i); hold on;
-
-        step = 10;
-        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});
-        step = 1;
+        ax(i) = subplot(3,1,i); hold on;step = 10;
+        plot(vehicle_attitude_setpoint_t(1:step:end), d_sp{i}*r2d, STYLE_SP{:});step = 1;
         plot(vehicle_attitude_t(1:step:end), d_res{i}*r2d, STYLE_RES{:});
-
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
-        if i == 1
-            legend('Setpoint', 'Response', 'Location', 'best');
-        end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        grid on; ylabel(ylabels{i});xlabel('Time (s)');  %title(titles{i}); 
+        if i==1, legend('Setpoint','Response','NumColumns',2, 'Location', 'best'); end
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
     linkaxes(ax, 'x');
     % PlotToFile(gcf, 'results/att.png', 20, 20);
 end
 
-% --- Figure 3: Velocity ---
-% if(exist('V_XYZ', 'var'))
-%     figure('Name', 'Velocity', 'Color', 'w'); 
-%     ylabels = {'V_X (m/s)', 'V_Y (m/s)', 'V_Z (m/s)'};
-%     has_sp = exist('V_XYZ_setpoint', 'var');
-%     ax = [];
-%     for i = 1:3
-%         ax(i) = subplot(3,1,i); hold on;
-%         if has_sp, plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,i), 'k-', 'LineWidth', 1); end
-%         plot(vehicle_local_position_t, V_XYZ(:,i), '--', 'LineWidth', 1, 'Color', [0.6, 0.2, 0]);
-%         grid on; ylabel(ylabels{i}); if i==1, title('Velocity'); legend('Setpoint','Response'); end
-%         add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-%     end
-%     linkaxes(ax, 'x'); xlabel('Time (s)');
-% end
-
-% --- Figure 3: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
+% --- Figure 3a: Velocity & TECS (Dynamic subplot count: 3 or 4) ---
 if exist('V_XYZ', 'var')
-    figure('Name', 'Velocity', 'Color', 'w');
+    figure('Name', 'Velocity', 'Color', 'w');  
+    n_rows = 3;
+    ax = [];
 
-    has_tecs = exist('tecs_h_rate', 'var');
-    if has_tecs
-        n_rows = 4;
-    else
-        n_rows = 3;
-    end
-
-    ax = gobjects(1, n_rows);
-
-    ax(1) = subplot(n_rows,1,1); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:});
-    end
+    % --- Subplot 1: Velocity X ---
+    ax(1) = subplot(n_rows, 1, 1); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,1), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,1), STYLE_RES{:});
-    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)');
-    if exist('V_XYZ_setpoint', 'var')
-        legend('Setpoint', 'Response', 'Location', 'best');
-    end
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_x$ (m/s)'); xlabel('Time (s)');  %title('Velocity X');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    ax(2) = subplot(n_rows,1,2); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:});
-    end
+    % --- Subplot 2: Velocity Y ---
+    ax(2) = subplot(n_rows, 1, 2); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,2), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,2), STYLE_RES{:});
-    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)');
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    grid on; ylabel('$v_y$ (m/s)'); xlabel('Time (s)');   %title('Velocity Y');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    ax(3) = subplot(n_rows,1,3); hold on;
-    if exist('V_XYZ_setpoint', 'var')
-        plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:});
-    end
+    % --- Subplot 3: Velocity Z ---
+    ax(3) = subplot(n_rows, 1, 3); hold on;
+    if exist('V_XYZ_setpoint', 'var'), plot(vehicle_local_position_setpoint_t, V_XYZ_setpoint(:,3), STYLE_SP{:}); end
     plot(vehicle_local_position_t, V_XYZ(:,3), STYLE_RES{:});
-    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)');
-    add_standard_background(vis_flight_intervals, vis_flight_names, ...
-        vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+    if exist('V_XYZ_setpoint', 'var'), legend('Setpoint','Response','NumColumns',2, 'Location', 'best'); end
+    grid on; ylabel('$v_z$ (m/s)'); xlabel('Time (s)'); %title('Velocity Z');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
 
-    if has_tecs
-        ax(4) = subplot(n_rows,1,4); hold on;
-        plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate_sp, STYLE_SP{:});
-        plot(log.data.tecs_status_0.timestamp*1e-6, tecs_h_rate, STYLE_RES{:});
-        grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)');
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
-    end
 
-    linkaxes(ax, 'x');
+
+    linkaxes(ax, 'x');   
     % PlotToFile(gcf, 'results/vel.png', 20, 20);
 end
 
+% --- Subplot 3b: TECS Height Rate (Only plotted if exists) ---
+if exist('tecs_t', 'var')
+    figure('Name', 'tecs', 'Color', 'w');  
+    n_rows = 6;
+    ax = [];
+    
+    ax(1) = subplot(n_rows, 1, 1); hold on;
+    plot(tecs_t, altitude_sp, STYLE_SP{:});hold on;
+    s = plot_style(sty, 'setpoint7', ':', 1.4);
+    plot(tecs_t, altitude_reference, s{:});
+    plot(vehicle_local_position_t, -XYZ(:,3)+ref_alt, STYLE_RES{:});hold on;
+    grid on; ylabel('$h$ (m)');xlabel('Time (s)');title('TECS altitude');
+    legend('altitude sp', 'altitude reference','altitude', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(2) = subplot(n_rows, 1, 2); hold on;
+     
+    s = plot_style(sty, 'setpoint4', '--', 1);
+    plot(tecs_t, height_rate_reference, s{:});  
+    s = plot_style(sty, 'response4', '-', 1.5);
+    plot(tecs_t, height_rate_direct, s{:}); 
+    plot(tecs_t, height_rate_setpoint, STYLE_SP{:}); 
+    plot(tecs_t, height_rate, STYLE_RES{:});
+    grid on; ylabel('$\dot{h}$ (m/s)'); xlabel('Time (s)'); title('TECS height rate');
+    legend('height rate reference', 'height rate direct','height rate setpoint','height rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(3) = subplot(n_rows, 1, 3); hold on;
+    % s = plot_style(sty, 'setpoint7', '--', 0.8);
+    % plot(tecs_t, equivalent_airspeed_sp, s{:});
+    plot(tecs_t, true_airspeed_sp, STYLE_SP{:});
+    plot(tecs_t, true_airspeed_filtered, STYLE_RES{:});
+    grid on; ylabel('$V_a$ (m/s)'); xlabel('Time (s)'); title('TECS airspeed');
+    legend('true airspeed sp', 'true airspeed filtered', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(4) = subplot(n_rows, 1, 4); hold on;
+    plot(tecs_t, true_airspeed_derivative_sp, STYLE_SP{:});
+    plot(tecs_t, true_airspeed_derivative, STYLE_RES{:});
+    s = plot_style(sty, 'response4', '-.', 1.1);
+    % plot(tecs_t, true_airspeed_derivative_raw, s{:});
+    grid on; ylabel('$\dot{V}_a$ (m/s)'); title('TECS airspeed derivative');
+    legend('true airspeed derivative sp', 'true airspeed derivative', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(5) = subplot(n_rows, 1, 5); hold on;
+    plot(tecs_t, total_energy_rate_sp, STYLE_SP{:});
+    plot(tecs_t, total_energy_rate, STYLE_RES{:});
+    grid on; ylabel('$\dot{E}$'); xlabel('Time (s)');title('TECS total energy rate');
+    legend('total energy rate sp','total energy rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    ax(6) = subplot(n_rows, 1, 6); hold on;
+    plot(tecs_t, total_energy_balance_rate_sp, STYLE_SP{:});
+    plot(tecs_t, total_energy_balance_rate, STYLE_RES{:});
+    grid on; ylabel('$\dot{B}$'); xlabel('Time (s)'); title('TECS total energy balance rate');
+    legend('total energy balance rate sp','total energy balance rate', 'Location', 'best');
+    add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+    % PlotToFile(gcf, 'results/tecs.pdf', 20, 24);
+end
+
 % --- Figure 4: Position ---
-if exist('XYZ', 'var')
-    figure('Name', 'Position', 'Color', 'w');
+if(exist('XYZ', 'var'))
+    figure('Name', 'Position', 'Color', 'w'); 
     ylabels = {'x (m)', 'y (m)', 'z (m)'};
     has_sp = exist('XYZ_setpoint', 'var');
-    ax = gobjects(1,3);
-
+    ax = [];
     for i = 1:3
         ax(i) = subplot(3,1,i); hold on;
-        if has_sp
-            plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:});
-        end
+        if has_sp, plot(vehicle_local_position_setpoint_t, XYZ_setpoint(:,i), STYLE_SP{:}); end
         plot(vehicle_local_position_t, XYZ(:,i), STYLE_RES{:});
-        grid on;
-        ylabel(ylabels{i});
-        xlabel('Time (s)');
-        if i == 1
-            legend('Setpoint', 'Response', 'Location', 'best');
+        grid on; ylabel(ylabels{i}); 
+        if i==3
+            % title('Position'); 
+            legend('Setpoint','Response','NumColumns',2, 'Location', 'northeast'); 
         end
-        add_standard_background(vis_flight_intervals, vis_flight_names, ...
-            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        add_standard_background(vis_flight_intervals, vis_flight_names, vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
     end
-    linkaxes(ax, 'x');
+    linkaxes(ax, 'x');   xlabel('Time (s)');
     % PlotToFile(gcf, 'results/pos.png', 20, 20);
 end
 
 %% =========================================================================
-%  Trajectory
+%  Trajectory  
 % =========================================================================
-if exist('XYZ', 'var') && exist('XYZ_setpoint', 'var')
+if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
     figure('Name', 'Trajectory', 'Color', 'w');
     step = 10;
-    plot3(XYZ_setpoint(1:step:end,1), XYZ_setpoint(1:step:end,2), ...
-        -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
-    plot3(XYZ(:,1), XYZ(:,2), -XYZ(:,3), STYLE_RES{:});
-    xlabel('x (m)'); ylabel('y (m)'); zlabel('z (m)');
+    plot3(XYZ_setpoint(1:step:end,2), XYZ_setpoint(1:step:end,1), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
+    plot3(XYZ(:,2), XYZ(:,1), -XYZ(:,3), STYLE_RES{:});
+    % title('Trajectory'); 
+    xlabel('y (m)'); ylabel('x (m)'); zlabel('z (m)');
     grid on; view(45, 30);
     legend('Setpoint', 'Response', 'Location', 'best');
     % PlotToFile(gcf, 'results/traj.png', 15, 15);
@@ -237,7 +276,7 @@ if control_fig
             layout_title = 'Actuator Controls (Group 0)';
         end
 
-        line_cols = {sty.axis1, sty.axis2, sty.axis3};
+        line_cols = {STYLE_AXIS1, STYLE_AXIS2, STYLE_AXIS3};
         titles = {'All', 'Roll', 'Pitch', 'Yaw', 'Thrust'};
         ax_all = [];
 
@@ -253,11 +292,11 @@ if control_fig
 
                 if ~isempty(actuator_controls_0.thrust_z_neg)
                     plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, ...
-                        sty.thrust{:}, 'DisplayName', 'Thrust (up)');
+                        STYLE_THRUST{:}, 'DisplayName', 'Thrust (up)');
                 end
                 if ~isempty(actuator_controls_0.thrust_x) && any(actuator_controls_0.thrust_x ~= 0)
                     plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, ...
-                        sty.thrust_alt{:}, 'DisplayName', 'Thrust (fwd)');
+                        STYLE_THRUST_ALT{:}, 'DisplayName', 'Thrust (fwd)');
                 end
                 title('Group 0 (Main)');
                 if n_cols == 1
@@ -272,11 +311,11 @@ if control_fig
             elseif row == 5
                 if ~isempty(actuator_controls_0.thrust_z_neg)
                     plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_z_neg, ...
-                        sty.thrust{:}, 'DisplayName', 'Up');
+                        STYLE_THRUST{:}, 'DisplayName', 'Up');
                 end
                 if ~isempty(actuator_controls_0.thrust_x)
                     plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust_x, ...
-                        sty.thrust_alt{:}, 'DisplayName', 'Fwd');
+                        STYLE_THRUST_ALT{:}, 'DisplayName', 'Fwd');
                 end
                 ylabel('Thrust');
                 legend('show', 'Location', 'best');
@@ -296,7 +335,7 @@ if control_fig
                     plot(actuator_controls_1.time, actuator_controls_1.yaw,   line_cols{3}{:}, 'DisplayName', 'Yaw');
                     if ~isempty(actuator_controls_1.thrust_x)
                         plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
-                            sty.thrust_alt{:}, 'DisplayName', 'Thrust (fwd)');
+                            STYLE_THRUST_ALT{:}, 'DisplayName', 'Thrust (fwd)');
                     end
                     title('Group 1 (Aux/FW)');
 
@@ -307,7 +346,7 @@ if control_fig
                 elseif row == 5
                     if ~isempty(actuator_controls_1.thrust_x)
                         plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
-                            sty.thrust_alt{:}, 'DisplayName', 'Fwd');
+                            STYLE_THRUST_ALT{:}, 'DisplayName', 'Fwd');
                     end
                 end
                 grid on;
@@ -367,7 +406,7 @@ if control_fig
                         for i = 1:n_motors
                             if i <= size(motors, 2)
                                 plot(t_m, motors(:, i), 'Color', colors_motor(i,:), ...
-                                    'LineWidth', sty.lw_multi, ...
+                                    'LineWidth', LW_MULTI, ...
                                     'DisplayName', sprintf('Motor %d', i));
                             end
                         end
@@ -393,7 +432,7 @@ if control_fig
                         for i = 1:n_servos
                             if i <= size(servos, 2)
                                 plot(t_s, servos(:, i), 'Color', colors_servo(i,:), ...
-                                    'LineWidth', sty.lw_multi, ...
+                                    'LineWidth', LW_MULTI, ...
                                     'DisplayName', sprintf('Servo %d', i));
                             end
                         end
@@ -435,7 +474,7 @@ if control_fig
 
                         if i <= size(motors, 2)
                             plot(log.data.actuator_motors_0.timestamp*1e-6, motors(:, i), ...
-                                'Color', motor_colors(i,:), 'LineWidth', sty.lw_multi);
+                                'Color', motor_colors(i,:), 'LineWidth', LW_MULTI);
                         end
 
                         grid on;
@@ -477,7 +516,7 @@ if control_fig
 
                         if i <= size(servos, 2)
                             plot(log.data.actuator_servos_0.timestamp*1e-6, servos(:, i), ...
-                                'Color', servo_colors(i,:), 'LineWidth', sty.lw_multi);
+                                'Color', servo_colors(i,:), 'LineWidth', LW_MULTI);
                         end
 
                         grid on;
@@ -519,7 +558,7 @@ if control_fig
                 for k = 1:length(idx_m)
                     info = active_channels(idx_m(k));
                     data = log.data.actuator_outputs_0.(info.col_name);
-                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', sty.lw_multi, ...
+                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', LW_MULTI, ...
                         'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
                 end
                 grid on; ylabel('PWM (us)'); title('Motors PWM'); legend('show');
@@ -535,7 +574,7 @@ if control_fig
                 for k = 1:length(idx_s)
                     info = active_channels(idx_s(k));
                     data = log.data.actuator_outputs_0.(info.col_name);
-                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', sty.lw_multi, ...
+                    plot(outputs_t, data, 'Color', cols(k,:), 'LineWidth', LW_MULTI, ...
                         'DisplayName', sprintf('%s (Ch%d)', info.name, info.idx));
                 end
                 grid on; ylabel('PWM (us)'); title('Servos/Other PWM'); legend('show');
@@ -568,7 +607,7 @@ if control_fig
             y_data = outputs(:, i);
 
             if ~all(isnan(y_data)) && any(y_data ~= 0)
-                plot(outputs_t, y_data, 'Color', raw_colors(i,:), 'LineWidth', sty.lw_multi);
+                plot(outputs_t, y_data, 'Color', raw_colors(i,:), 'LineWidth', LW_MULTI);
             end
 
             ylabel(sprintf('Out %d', i-1));
@@ -626,10 +665,10 @@ if verbose
     % ---------------------------------------------------------------------
     if isfield(log.data, 'manual_control_setpoint_0')
         figure('Name', 'Manual Control Inputs', 'Color', 'w'); hold on;
-        plot(rc_t, rc_roll,     sty.axis1_bold{:}, 'DisplayName', 'Roll');
-        plot(rc_t, rc_pitch,    sty.axis2_bold{:}, 'DisplayName', 'Pitch');
-        plot(rc_t, rc_yaw,      sty.axis3_bold{:}, 'DisplayName', 'Yaw');
-        plot(rc_t, rc_throttle, sty.thrust_bold{:}, 'DisplayName', 'Throttle');
+        plot(rc_t, rc_roll,     STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Roll');
+        plot(rc_t, rc_pitch,    STYLE_AXIS2_BOLD{:}, 'DisplayName', 'Pitch');
+        plot(rc_t, rc_yaw,      STYLE_AXIS3_BOLD{:}, 'DisplayName', 'Yaw');
+        plot(rc_t, rc_throttle, STYLE_THRUST_BOLD{:}, 'DisplayName', 'Throttle');
 
         grid on;
         legend('show', 'Location', 'best', 'NumColumns', 4);
@@ -685,9 +724,9 @@ if verbose
     % ---------------------------------------------------------------------
     if exist('raw_acc', 'var')
         figure('Name', 'Raw Acceleration', 'Color', 'w'); hold on;
-        plot(raw_acc_t, raw_acc(:,1), sty.axis1_thin{:}, 'DisplayName', 'Acc X');
-        plot(raw_acc_t, raw_acc(:,2), sty.axis2_thin{:}, 'DisplayName', 'Acc Y');
-        plot(raw_acc_t, raw_acc(:,3), sty.axis3_thin{:}, 'DisplayName', 'Acc Z');
+        plot(raw_acc_t, raw_acc(:,1), STYLE_AXIS1_THIN{:}, 'DisplayName', 'Acc X');
+        plot(raw_acc_t, raw_acc(:,2), STYLE_AXIS2_THIN{:}, 'DisplayName', 'Acc Y');
+        plot(raw_acc_t, raw_acc(:,3), STYLE_AXIS3_THIN{:}, 'DisplayName', 'Acc Z');
 
         grid on;
         legend('show', 'Location', 'best');
@@ -709,7 +748,7 @@ if verbose
             id = vib_data(k).id;
             plot(vib_data(k).t, vib_data(k).val, ...
                 'Color', line_colors(k,:), ...
-                'LineWidth', sty.lw_multi_bold, ...
+                'LineWidth', LW_MULTI_BOLD, ...
                 'DisplayName', sprintf('Accel %d Vib [m/s$^2$]', id));
         end
         grid on;
@@ -751,9 +790,9 @@ if verbose
     % ---------------------------------------------------------------------
     if exist('raw_gyro', 'var')
         figure('Name', 'Raw Angular Speed', 'Color', 'w'); hold on;
-        plot(raw_gyro_t, raw_gyro(:,1), sty.axis1_thin{:}, 'DisplayName', 'X');
-        plot(raw_gyro_t, raw_gyro(:,2), sty.axis2_thin{:}, 'DisplayName', 'Y');
-        plot(raw_gyro_t, raw_gyro(:,3), sty.axis3_thin{:}, 'DisplayName', 'Z');
+        plot(raw_gyro_t, raw_gyro(:,1), STYLE_AXIS1_THIN{:}, 'DisplayName', 'X');
+        plot(raw_gyro_t, raw_gyro(:,2), STYLE_AXIS2_THIN{:}, 'DisplayName', 'Y');
+        plot(raw_gyro_t, raw_gyro(:,3), STYLE_AXIS3_THIN{:}, 'DisplayName', 'Z');
 
         grid on; legend('show');
         ylabel('Angular Speed [deg/s]');
@@ -850,9 +889,9 @@ if verbose
     % =========================================================================
     if exist('mag_data', 'var')
         figure('Name', 'Raw Magnetic Field', 'Color', 'w'); hold on;
-        plot(mag_t, mag_data(:,1), sty.axis1{:}, 'DisplayName', 'X');
-        plot(mag_t, mag_data(:,2), sty.axis2{:}, 'DisplayName', 'Y');
-        plot(mag_t, mag_data(:,3), sty.axis3{:}, 'DisplayName', 'Z');
+        plot(mag_t, mag_data(:,1), STYLE_AXIS1{:}, 'DisplayName', 'X');
+        plot(mag_t, mag_data(:,2), STYLE_AXIS2{:}, 'DisplayName', 'Y');
+        plot(mag_t, mag_data(:,3), STYLE_AXIS3{:}, 'DisplayName', 'Z');
 
         grid on; legend('show');
         ylabel('Magnetic Field [Gauss]');
@@ -891,17 +930,17 @@ if verbose
     if exist('gps_info', 'var')
         figure('Name', 'GPS Uncertainty', 'Color', 'w'); hold on;
 
-        plot(gps_t, gps_info.eph, sty.axis1{:}, 'DisplayName', 'H Pos Accuracy (EPH) [m]');
-        plot(gps_t, gps_info.epv, sty.axis2{:}, 'DisplayName', 'V Pos Accuracy (EPV) [m]');
+        plot(gps_t, gps_info.eph, STYLE_AXIS1{:}, 'DisplayName', 'H Pos Accuracy (EPH) [m]');
+        plot(gps_t, gps_info.epv, STYLE_AXIS2{:}, 'DisplayName', 'V Pos Accuracy (EPV) [m]');
 
         if ismember('hdop', gps_info.Properties.VariableNames)
-            plot(gps_t, gps_info.hdop, sty.axis1_dash{:}, 'DisplayName', 'HDOP [m]');
-            plot(gps_t, gps_info.vdop, sty.axis2_dash{:}, 'DisplayName', 'VDOP [m]');
+            plot(gps_t, gps_info.hdop, STYLE_AXIS1_DASH{:}, 'DisplayName', 'HDOP [m]');
+            plot(gps_t, gps_info.vdop, STYLE_AXIS2_DASH{:}, 'DisplayName', 'VDOP [m]');
         end
 
-        plot(gps_t, gps_info.s_variance, sty.axis4_dot{:}, 'DisplayName', 'Speed Accuracy [m/s]');
-        plot(gps_t, gps_info.satellites, sty.axis5_bold{:}, 'DisplayName', 'Satellites Used');
-        plot(gps_t, gps_info.fix_type, sty.axis3_bold{:}, 'DisplayName', 'Fix Type');
+        plot(gps_t, gps_info.s_variance, STYLE_AXIS4_DOT{:}, 'DisplayName', 'Speed Accuracy [m/s]');
+        plot(gps_t, gps_info.satellites, STYLE_AXIS5_BOLD{:}, 'DisplayName', 'Satellites Used');
+        plot(gps_t, gps_info.fix_type, STYLE_AXIS3_BOLD{:}, 'DisplayName', 'Fix Type');
 
         grid on;
         legend('show', 'Location', 'best', 'NumColumns', 2);
@@ -919,8 +958,8 @@ if verbose
     % ---------------------------------------------------------------------
     if exist('gps_info', 'var')
         figure('Name', 'GPS Noise & Jamming', 'Color', 'w'); hold on;
-        plot(gps_t, gps_info.noise,   sty.axis2{:}, 'DisplayName', 'Noise per ms');
-        plot(gps_t, gps_info.jamming, sty.axis1{:}, 'DisplayName', 'Jamming Indicator');
+        plot(gps_t, gps_info.noise,   STYLE_AXIS2{:}, 'DisplayName', 'Noise per ms');
+        plot(gps_t, gps_info.jamming, STYLE_AXIS1{:}, 'DisplayName', 'Jamming Indicator');
 
         grid on; legend('show');
         ylabel('Value');
@@ -938,16 +977,16 @@ if verbose
     mag_mag = sqrt(mag_data(:,1).^2 + mag_data(:,2).^2 + mag_data(:,3).^2);
 
     hold on;
-    plot(mag_t, mag_mag, sty.axis1{:}, 'DisplayName', 'Magnetic Field Norm');
+    plot(mag_t, mag_mag, STYLE_AXIS1{:}, 'DisplayName', 'Magnetic Field Norm');
 
     if ~isempty(actuator_controls_0.thrust)
         plot(actuator_controls_0.time_thrust, actuator_controls_0.thrust, ...
-            sty.thrust{:}, 'DisplayName', 'Thrust');
+            STYLE_THRUST{:}, 'DisplayName', 'Thrust');
     end
 
     if log.data.vehicle_status_0.is_vtol(1) && ~dynamic_control_alloc && ~isempty(thrust_sp_1)
         plot(actuator_controls_1.time, actuator_controls_1.thrust_x, ...
-            sty.thrust_alt{:}, 'DisplayName', 'Thrust (Fixed-wing)');
+            STYLE_THRUST_ALT{:}, 'DisplayName', 'Thrust (Fixed-wing)');
     end
 
     add_standard_background(vis_flight_intervals, vis_flight_names, ...
@@ -968,11 +1007,11 @@ if verbose
 
         ax1 = subplot(2,1,1); hold on;
         yyaxis left
-        plot(bat_t, bat_v, sty.axis2_bold{:}, 'DisplayName', 'Voltage [V]');
+        plot(bat_t, bat_v, STYLE_AXIS2_BOLD{:}, 'DisplayName', 'Voltage [V]');
         ylabel('Voltage [V]');
 
         yyaxis right
-        plot(bat_t, bat_i, sty.axis1{:}, 'DisplayName', 'Current [A]');
+        plot(bat_t, bat_i, STYLE_AXIS1{:}, 'DisplayName', 'Current [A]');
         ylabel('Current [A]');
 
         title('Battery Voltage & Current');
@@ -983,11 +1022,11 @@ if verbose
 
         ax2 = subplot(2,1,2); hold on;
         yyaxis left
-        plot(bat_t, bat_discharged/100, sty.axis4{:}, 'DisplayName', 'Discharged [mAh/100]');
+        plot(bat_t, bat_discharged/100, STYLE_AXIS4{:}, 'DisplayName', 'Discharged [mAh/100]');
         ylabel('Discharged [mAh/100]');
 
         yyaxis right
-        plot(bat_t, bat_remaining*100, sty.axis3_bold{:}, 'DisplayName', 'Remaining [\%]');
+        plot(bat_t, bat_remaining*100, STYLE_AXIS3_BOLD{:}, 'DisplayName', 'Remaining [\%]');
         ylabel('Remaining [\%]');
         ylim([0, 105]);
 
@@ -1009,7 +1048,7 @@ if verbose
 
         for i = 1:length(temp_data)
             plot(temp_data(i).t, temp_data(i).val, ...
-                'LineWidth', sty.lw_multi_bold, ...
+                'LineWidth', LW_MULTI_BOLD, ...
                 'Color', colors(i,:), ...
                 'DisplayName', temp_data(i).name);
         end
@@ -1040,7 +1079,7 @@ if verbose
 
             if max(data) > 0.1
                 plot_count = plot_count + 1;
-                plot(est_t, data, 'Color', colors(plot_count,:), 'LineWidth', sty.lw_multi_bold);
+                plot(est_t, data, 'Color', colors(plot_count,:), 'LineWidth', LW_MULTI_BOLD);
                 active_legends{end+1} = lbl;
 
                 if plot_count >= max_plots
@@ -1050,7 +1089,7 @@ if verbose
         end
 
         if plot_count == 0
-            plot(est_t, candidates{1,2}, sty.axis4{:});
+            plot(est_t, candidates{1,2}, STYLE_AXIS4{:});
             active_legends{end+1} = candidates{1,1};
             title('Estimator Flags (All Good)');
         else
@@ -1073,7 +1112,7 @@ if verbose
         figure('Name', 'Failsafe Flags', 'Color', 'w'); hold on;
 
         if exist('vs_failsafe', 'var')
-            area(vs_t, double(vs_failsafe), 'FaceColor', sty.fill_warn, ...
+            area(vs_t, double(vs_failsafe), 'FaceColor', COLOR_WARN_FILL, ...
                 'EdgeColor', 'none', 'DisplayName', 'In Failsafe Mode');
         end
 
@@ -1090,7 +1129,7 @@ if verbose
             if max(data) > 0
                 plot_idx = plot_idx + 1;
                 plot(fs_t, double(data) * 0.8 + plot_idx, ...
-                    'LineWidth', sty.lw_multi_bold, ...
+                    'LineWidth', LW_MULTI_BOLD, ...
                     'Color', colors(mod(plot_idx-1,10)+1,:), ...
                     'DisplayName', strrep(col_name, '_', ' '));
             end
@@ -1115,8 +1154,8 @@ if verbose
     % ---------------------------------------------------------------------
     if isfield(log.data, 'cpuload_0')
         figure('Name', 'CPU & RAM', 'Color', 'w'); hold on;
-        plot(cpu_t, ram_usage, sty.axis2_bold{:}, 'DisplayName', 'RAM Usage');
-        plot(cpu_t, cpu_load,  sty.axis1_bold{:}, 'DisplayName', 'CPU Load');
+        plot(cpu_t, ram_usage, STYLE_AXIS2_BOLD{:}, 'DisplayName', 'RAM Usage');
+        plot(cpu_t, cpu_load,  STYLE_AXIS1_BOLD{:}, 'DisplayName', 'CPU Load');
 
         grid on;
         legend('show', 'Location', 'best');
@@ -1140,7 +1179,7 @@ if verbose
         dt_seq = diff(t_raw);
         t_plot_sc = t_raw(2:end) * 1e-6;
 
-        plot(t_plot_sc, dt_seq, sty.axis3_thin{:}, ...
+        plot(t_plot_sc, dt_seq, STYLE_AXIS3_THIN{:}, ...
             'DisplayName', 'delta t (between 2 logged samples)');
 
         if isfield(log.data, 'estimator_status_0')
@@ -1148,7 +1187,7 @@ if verbose
             t_es = double(es.timestamp) * 1e-6;
             slip_us = double(es.time_slip) * 1e6;
 
-            plot(t_es, slip_us, sty.axis4_bold{:}, ...
+            plot(t_es, slip_us, STYLE_AXIS4_BOLD{:}, ...
                 'DisplayName', 'Estimator time slip (cumulative)');
         end
 
@@ -1171,75 +1210,33 @@ end
 %% =========================================================================
 %  Local functions
 % =========================================================================
-function sty = make_plot_style()
-    % -------- Core pair used in Fig.1-5 --------
-    sty.c_setpoint = [0.12, 0.12, 0.12];
-    sty.c_response = [0.70, 0.22, 0.40];
-
-    % -------- Multi-signal palette --------
-    sty.c_axis1 = [0.00, 0.447, 0.741];
-    sty.c_axis2 = [0.850, 0.325, 0.098];
-    sty.c_axis3 = [0.466, 0.674, 0.188];
-    sty.c_axis4 = [0.494, 0.184, 0.556];
-    sty.c_axis5 = [0.929, 0.694, 0.125];
-    sty.c_axis6 = [0.301, 0.745, 0.933];
-    sty.c_axis7 = [0.635, 0.078, 0.184];
-
-    % -------- Line widths --------
-    sty.lw_sp = 0.9;
-    sty.lw_res = 1.1;
-    sty.lw_main = 1.0;
-    sty.lw_main_bold = 1.3;
-    sty.lw_thin = 0.6;
-    sty.lw_multi = 0.9;
-    sty.lw_multi_bold = 1.2;
-
-    % -------- Frequently used styles --------
-    sty.setpoint = {'Color', sty.c_setpoint, 'LineStyle', '--', 'LineWidth', sty.lw_sp};
-    sty.response = {'Color', sty.c_response, 'LineStyle', '-',  'LineWidth', sty.lw_res};
-    sty.response_fade = {'Color', [0.70, 0.22, 0.40, 0.45], 'LineStyle', '-', 'LineWidth', sty.lw_main};
-
-    sty.axis1 = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis2 = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis3 = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis4 = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-    sty.axis5 = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main};
-
-    sty.axis1_bold = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis2_bold = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis3_bold = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis4_bold = {'Color', sty.c_axis4, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-    sty.axis5_bold = {'Color', sty.c_axis5, 'LineStyle', '-', 'LineWidth', sty.lw_main_bold};
-
-    sty.axis1_thin = {'Color', sty.c_axis1, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
-    sty.axis2_thin = {'Color', sty.c_axis2, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
-    sty.axis3_thin = {'Color', sty.c_axis3, 'LineStyle', '-', 'LineWidth', sty.lw_thin};
-
-    sty.axis1_dash = {'Color', sty.c_axis1, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
-    sty.axis2_dash = {'Color', sty.c_axis2, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
-    sty.axis4_dot  = {'Color', sty.c_axis4, 'LineStyle', ':',  'LineWidth', sty.lw_main};
-
-    sty.aux1 = {'Color', sty.c_axis4, 'LineStyle', '--', 'LineWidth', sty.lw_thin};
-
-    sty.thrust = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '-',  'LineWidth', sty.lw_main_bold};
-    sty.thrust_alt = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '--', 'LineWidth', sty.lw_main};
-    sty.thrust_bold = {'Color', [0.10, 0.10, 0.10], 'LineStyle', '-', 'LineWidth', 1.4};
-
-    sty.fill_warn = [1.00, 0.85, 0.85];
-end
-
 function cols = make_channel_colors(n, sty)
-    base = [sty.c_axis1;
-        sty.c_axis2;
-        sty.c_axis3;
-        sty.c_axis4;
-        sty.c_axis5;
-        sty.c_axis6;
-        sty.c_axis7];
+    base = [sty.color.setpoint2;
+        sty.color.response2;
+        sty.color.setpoint3;
+        sty.color.response3;
+        sty.color.setpoint4;
+        sty.color.response4;
+        sty.color.setpoint5;
+        sty.color.response5;
+        sty.color.setpoint6;
+        sty.color.response6];
 
     if n <= size(base,1)
         cols = base(1:n, :);
     else
         cols = lines(n);
+    end
+end
+
+
+function idx_out = subsample_idx(idx_in, step)
+    if isempty(idx_in)
+        idx_out = idx_in;
+        return;
+    end
+    idx_out = idx_in(1:step:end);
+    if idx_out(end) ~= idx_in(end)
+        idx_out = [idx_out; idx_in(end)];
     end
 end

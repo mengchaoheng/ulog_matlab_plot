@@ -11,7 +11,7 @@ d2r = pi/180;
 r2d = 180/pi;
 get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
-% Specify filename here (can be relative path 'data/09_29_53' or absolute path)
+% Specify filename here (can be relative path 'data/09_49_18' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
 specifiedFileName = 'data/16_01_23.ulg'; % Supports with or without extension
 
