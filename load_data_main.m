@@ -13,7 +13,7 @@ get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
 % Specify filename here (can be relative path 'data/09_29_53' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/13_31_44.ulg'; % Supports with or without extension
+specifiedFileName = 'data/16_01_23.ulg'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -52,8 +52,14 @@ else
     disp('No MAT file found, start parsing ULog...');
     
     % Define tool paths (please adjust according to actual situation)
+    % For example, for the base_path = '/Users/mchmini/.pyenv/shims/': 
+    % $ which ulog2csv
+    % /Users/mchmini/.pyenv/shims/ulog2csv
+    % $ which python3                     
+    % /Users/mchmini/.pyenv/shims/python3
+    % The 
     if ismac
-        base_path = '~/Library/Python/3.9/bin/'; 
+        base_path = '/Users/mchmini/.pyenv/shims/'; 
         cmd_info = [base_path 'ulog_info'];
         cmd_msgs = [base_path 'ulog_messages'];
         cmd_params = [base_path 'ulog_params'];

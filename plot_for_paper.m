@@ -100,7 +100,7 @@ if(exist('vehicle_angular_velocity', 'var') && exist('vehicle_rates_setpoint', '
         
     end
     linkaxes(ax, 'x'); xlabel('Time (s)');
-    % PlotToFile(gcf, 'results/rates.pdf', 12, 5);
+    PlotToFile(gcf, 'results/rates.pdf', 12, 5);
 end
 
 % --- Figure 2: Attitude ---
