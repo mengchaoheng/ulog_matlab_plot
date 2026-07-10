@@ -26,7 +26,7 @@ function sty = plot_style_manager()
     sty.color.setpoint6  = [0.36, 0.76, 0.66];
     % green
     sty.color.setpoint7  = [0.18, 0.50, 0.22];
-    sty.color.setpoint8  = [0.56, 0.78, 0.42];
+    sty.color.setpoint8  = [0.466, 0.674, 0.188];%[0.56, 0.78, 0.42];
     % indigo / violet
     sty.color.setpoint9  = [0.32, 0.30, 0.62];
     sty.color.setpoint10 = [0.68, 0.62, 0.86];
@@ -34,7 +34,7 @@ function sty = plot_style_manager()
     % ==================== response family ====================
     % Rich warm-color family. Organized as hue pairs with dark/light levels.
     % red
-    sty.color.response1  = [0.62, 0.12, 0.16];
+    sty.color.response1  = [0.635, 0.078, 0.184];%[0.62, 0.12, 0.16];
     sty.color.response2  = [0.90, 0.42, 0.40];
     % orange
     sty.color.response3  = [0.78, 0.34, 0.08];
