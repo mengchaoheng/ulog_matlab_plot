@@ -2,7 +2,7 @@ clear all;
 close all;
 clc;
 
-run('load_data_main.m'); % load('flight_data.mat'); 09_49_18
+run('load_data_main.m'); 
 addpath(genpath(pwd));
 
 %% =========================================================================
@@ -76,7 +76,7 @@ MAX_MOTORS = 12;
 MAX_SERVOS = 8;  
 plot_together = 0;   % 1: Servos and motors combined display, 0: independent display
 verbose = 0;         % 1: Display more diagnostics
-control_fig = 1;     % 1: Display control quantities
+control_fig = 0;     % 1: Display control quantities
 n_raw_plot = 8;      % For versions before 1.13, plot first 8 channels of pwm
 
 %% =========================================================================
@@ -247,7 +247,7 @@ end
 % =========================================================================
 if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var'))
     figure('Name', 'Trajectory', 'Color', 'w');
-    step = 10;
+    step = 1;
     plot3(XYZ_setpoint(1:step:end,2), XYZ_setpoint(1:step:end,1), -XYZ_setpoint(1:step:end,3), STYLE_SP{:}); hold on;
     plot3(XYZ(:,2), XYZ(:,1), -XYZ(:,3), STYLE_RES{:});
     % title('Trajectory'); 
