@@ -13,7 +13,7 @@ get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
 % Specify filename here (can be relative path 'data/09_49_18' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/12_09_34'; % Supports with or without extension
+specifiedFileName = 'data/06_54_46'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -290,6 +290,114 @@ if length(actuator_controls_1.time) > 1
     dt = mean(diff(actuator_controls_1.time));
     fprintf('Force/Torque (Grp1) setpoint sampling period: %f (ms), frequency: %f (Hz) \n', dt*1000, 1/dt);
 end
+
+%% =========================================================================
+%  Step 2.6a: Allocation INDI feedback filter
+% =========================================================================
+% These variables may still exist in the caller workspace when this script is
+% run repeatedly with different logs. Clear them so that an old log without
+% the new fields cannot accidentally reuse data from the previous run.
+clear allocation_feedback allocation_filter_status
+
+% High-rate input/output values used by the INDI feedback path.
+if isfield(log.data, 'allocation_value_0')
+    tbl = log.data.allocation_value_0;
+    feedback_fields = { ...
+        'timestamp', 'timestamp_sample', ...
+        'raw_allocated_torque_0_', 'raw_allocated_torque_1_', 'raw_allocated_torque_2_', ...
+        'allocated_torque_0_', 'allocated_torque_1_', 'allocated_torque_2_', ...
+        'raw_allocated_force_0_', 'raw_allocated_force_1_', 'raw_allocated_force_2_', ...
+        'allocated_force_0_', 'allocated_force_1_', 'allocated_force_2_'};
+
+    % Older firmware also publishes allocation_value_0, but with a different
+    % schema (error_*, u_*, flag, ...). Only decode the new INDI feedback
+    % layout when all of its fields are present.
+    if all(ismember(feedback_fields, tbl.Properties.VariableNames))
+        allocation_feedback = struct();
+        allocation_feedback.time = get_t(tbl);
+        allocation_feedback.time_sample = double(tbl.timestamp_sample) * 1e-6;
+        allocation_feedback.torque_raw = [tbl.raw_allocated_torque_0_, ...
+                                          tbl.raw_allocated_torque_1_, ...
+                                          tbl.raw_allocated_torque_2_];
+        allocation_feedback.torque_filtered = [tbl.allocated_torque_0_, ...
+                                               tbl.allocated_torque_1_, ...
+                                               tbl.allocated_torque_2_];
+        allocation_feedback.force_raw = [tbl.raw_allocated_force_0_, ...
+                                         tbl.raw_allocated_force_1_, ...
+                                         tbl.raw_allocated_force_2_];
+        allocation_feedback.force_filtered = [tbl.allocated_force_0_, ...
+                                              tbl.allocated_force_1_, ...
+                                              tbl.allocated_force_2_];
+
+        if height(tbl) > 1
+            allocation_feedback.logged_interval = diff(allocation_feedback.time);
+            dt = mean(allocation_feedback.logged_interval);
+            fprintf(['Allocation feedback recorded-topic period (logger spacing, not the ' ...
+                     'filter update dt): %.3f ms, frequency: %.1f Hz\n'], ...
+                dt * 1000, 1 / dt);
+        else
+            allocation_feedback.logged_interval = [];
+        end
+    else
+        fprintf(['allocation_value_0 uses the legacy schema; skipping the ' ...
+                 'INDI feedback-filter data.\n']);
+    end
+end
+
+% Low-rate diagnostic state. The publication interval is intentionally
+% independent from the high-rate filter update interval above.
+if isfield(log.data, 'allocation_feedback_filter_status_0')
+    tbl = log.data.allocation_feedback_filter_status_0;
+    allocation_filter_status = struct();
+    allocation_filter_status.time = get_t(tbl);
+    allocation_filter_status.event_time = double(tbl.filter_event_timestamp) * 1e-6;
+    allocation_filter_status.sample_interval = double(tbl.sample_interval);
+    allocation_filter_status.sample_rate_hz = double(tbl.filter_sample_rate_hz);
+    allocation_filter_status.torque_cutoff_hz = double(tbl.torque_filter_cutoff_hz);
+    allocation_filter_status.force_cutoff_hz = double(tbl.force_filter_cutoff_hz);
+    allocation_filter_status.reset_count = double(tbl.filter_reset_count);
+    allocation_filter_status.reconfigure_count = double(tbl.filter_reconfigure_count);
+    allocation_filter_status.event_reason = double(tbl.filter_event_reason);
+    allocation_filter_status.configured = logical(tbl.filters_configured);
+
+    if height(tbl) > 1
+        status_dt = mean(diff(allocation_filter_status.time));
+        fprintf('Allocation filter status logged period: %.3f ms, frequency: %.1f Hz\n', ...
+            status_dt * 1000, 1 / status_dt);
+    end
+
+    event_reason = allocation_filter_status.event_reason(end);
+
+    switch event_reason
+        case 1
+            event_reason_text = 'initialization';
+        case 2
+            event_reason_text = 'cutoff parameter load/change';
+        case 4
+            event_reason_text = 'sample-rate reconfiguration';
+        case 8
+            event_reason_text = 'effectiveness update (legacy firmware behavior)';
+        case 16
+            event_reason_text = 'feedback gap';
+        case 32
+            event_reason_text = 'axis recovery';
+        otherwise
+            event_reason_text = 'none/unknown';
+    end
+
+    fprintf(['Allocation filter state: mean update dt=%.3f ms, coefficient rate=%.1f Hz, ' ...
+             'torque cutoff=%.2f Hz, force cutoff=%.2f Hz, ' ...
+             'reset=%u, reconfigure=%u, last event=%s (%u), configured=%u\n'], ...
+        allocation_filter_status.sample_interval(end) * 1000, ...
+        allocation_filter_status.sample_rate_hz(end), ...
+        allocation_filter_status.torque_cutoff_hz(end), ...
+        allocation_filter_status.force_cutoff_hz(end), ...
+        allocation_filter_status.reset_count(end), ...
+        allocation_filter_status.reconfigure_count(end), ...
+        event_reason_text, event_reason, ...
+        allocation_filter_status.configured(end));
+end
+
 %% =========================================================================
 %  Step 2.7 & 2.8: Actuator Data Extraction  
 % =========================================================================
@@ -784,6 +892,3 @@ if isfield(log.data, 'airspeed_validated_0')
     airspeed_t = get_t(log.data.airspeed_validated_0);
     cairspeed_m_s = log.data.airspeed_validated_0.true_airspeed_m_s;
  end
-
-
-

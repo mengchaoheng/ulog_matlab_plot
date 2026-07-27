@@ -74,9 +74,9 @@ COLOR_WARN_FILL = sty.color.warn_fill;
 % =========================================================================
 MAX_MOTORS = 12; 
 MAX_SERVOS = 8;  
-plot_together = 0;   % 1: Servos and motors combined display, 0: independent display
+plot_together = 1;   % 1: Servos and motors combined display, 0: independent display
 verbose = 0;         % 1: Display more diagnostics
-control_fig = 0;     % 1: Display control quantities
+control_fig = 1;     % 1: Display control quantities
 n_raw_plot = 8;      % For versions before 1.13, plot first 8 channels of pwm
 
 %% =========================================================================
@@ -359,6 +359,118 @@ if control_fig
         xlabel(ax_all(end), 'Time (s)');
         sgtitle(layout_title);
         % PlotToFile(gcf, 'results/control.png', 20, 20);
+    end
+
+    % ---------------------------------------------------------------------
+    % Allocation INDI feedback: raw and filtered physical wrench
+    % ---------------------------------------------------------------------
+    if exist('allocation_feedback', 'var')
+        figure('Name', 'Allocation INDI Feedback Filter', 'Color', 'w');
+        axis_names = {'x', 'y', 'z'};
+        ax_filter = [];
+
+        for axis_idx = 1:3
+            ax = subplot(3, 2, 2 * axis_idx - 1); hold on;
+            ax_filter = [ax_filter, ax];
+            plot(allocation_feedback.time, allocation_feedback.torque_raw(:, axis_idx), ...
+                STYLE_AXIS2_THIN{:}, 'DisplayName', 'Raw');
+            plot(allocation_feedback.time, allocation_feedback.torque_filtered(:, axis_idx), ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Filtered');
+            grid on;
+            ylabel(sprintf('$M_%s$ (N m)', axis_names{axis_idx}));
+            if axis_idx == 1
+                title('Allocated moment feedback');
+                legend('Location', 'best');
+            end
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+            ax = subplot(3, 2, 2 * axis_idx); hold on;
+            ax_filter = [ax_filter, ax];
+            plot(allocation_feedback.time, allocation_feedback.force_raw(:, axis_idx), ...
+                STYLE_AXIS2_THIN{:}, 'DisplayName', 'Raw');
+            plot(allocation_feedback.time, allocation_feedback.force_filtered(:, axis_idx), ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Filtered');
+            grid on;
+            ylabel(sprintf('$F_%s$ (N)', axis_names{axis_idx}));
+            if axis_idx == 1
+                title('Allocated force feedback');
+                legend('Location', 'best');
+            end
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        end
+
+        xlabel(ax_filter(end - 1), 'Time (s)');
+        xlabel(ax_filter(end), 'Time (s)');
+        linkaxes(ax_filter, 'x');
+    end
+
+    % ---------------------------------------------------------------------
+    % Allocation INDI feedback filter: low-rate diagnostic state
+    % ---------------------------------------------------------------------
+    if exist('allocation_filter_status', 'var')
+        figure('Name', 'Allocation INDI Feedback Filter Status', 'Color', 'w');
+        ax_status = [];
+
+        ax = subplot(4, 1, 1); hold on;
+        ax_status = [ax_status, ax];
+        if exist('allocation_feedback', 'var') && ~isempty(allocation_feedback.logged_interval)
+            plot(allocation_feedback.time(2:end), ...
+                allocation_feedback.logged_interval * 1000, ...
+                STYLE_AXIS2_THIN{:}, ...
+                'DisplayName', 'Recorded topic spacing (logger)');
+        end
+        plot(allocation_filter_status.time, ...
+            allocation_filter_status.sample_interval * 1000, ...
+            STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Filter mean update dt');
+        grid on; ylabel('dt (ms)');
+        legend('Location', 'best');
+        title('Logger record spacing vs actual filter update interval');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        ax = subplot(4, 1, 2); hold on;
+        ax_status = [ax_status, ax];
+        plot(allocation_filter_status.time, allocation_filter_status.sample_rate_hz, ...
+            STYLE_AXIS1_BOLD{:});
+        grid on; ylabel('$f_s$ (Hz)');
+        title('Filter coefficient sample rate');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        ax = subplot(4, 1, 3); hold on;
+        ax_status = [ax_status, ax];
+        plot(allocation_filter_status.time, allocation_filter_status.torque_cutoff_hz, ...
+            STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Moment');
+        plot(allocation_filter_status.time, allocation_filter_status.force_cutoff_hz, ...
+            STYLE_AXIS2_BOLD{:}, 'DisplayName', 'Force');
+        grid on; ylabel('$f_c$ (Hz)');
+        legend('Location', 'best');
+        title('Configured cutoff');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        ax = subplot(4, 1, 4); hold on;
+        ax_status = [ax_status, ax];
+        reset_events = allocation_filter_status.reset_count ...
+            - allocation_filter_status.reset_count(1);
+        reconfigure_events = allocation_filter_status.reconfigure_count ...
+            - allocation_filter_status.reconfigure_count(1);
+        stairs(allocation_filter_status.time, reset_events, ...
+            'Color', C_AXIS1, 'LineWidth', LW_MAIN_BOLD, ...
+            'DisplayName', 'Reset events');
+        stairs(allocation_filter_status.time, reconfigure_events, ...
+            'Color', C_AXIS2, 'LineWidth', LW_MAIN_BOLD, ...
+            'DisplayName', 'Reconfigure events');
+        ylabel('Events since log start');
+        grid on; xlabel('Time (s)');
+        legend('Location', 'best');
+        title('Filter state changes (each increment is one event)');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        linkaxes(ax_status, 'x');
     end
 
     % ---------------------------------------------------------------------
