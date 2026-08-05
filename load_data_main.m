@@ -13,7 +13,7 @@ get_t = @(tbl) tbl.timestamp * 1e-6;
 % --- User Configuration Area ---------------------------------------------------------
 % Specify filename here (can be relative path 'data/09_49_18' or absolute path)
 % [KEY]: If left empty (i.e. specifiedFileName = '';), a dialog will pop up for selection when the script runs.
-specifiedFileName = 'data/06_54_46'; % Supports with or without extension
+specifiedFileName = 'data/09_08_59'; % Supports with or without extension
 
 if isempty(specifiedFileName)
     [fileName, pathName] = uigetfile('*.ulg', 'Please select the ULog file to analyze');
@@ -181,6 +181,7 @@ if(isfield(log.data, 'vehicle_attitude_setpoint_0'))
 end
 
 % 2.5 Position / Velocity
+clear acc_indi_active acc_indi_active_t hte_status
 if(isfield(log.data, 'vehicle_local_position_0'))
     XYZ = [log.data.vehicle_local_position_0.x, log.data.vehicle_local_position_0.y, log.data.vehicle_local_position_0.z];
     V_XYZ = [log.data.vehicle_local_position_0.vx, log.data.vehicle_local_position_0.vy, log.data.vehicle_local_position_0.vz];
@@ -198,6 +199,25 @@ if(isfield(log.data, 'vehicle_local_position_setpoint_0'))
     if length(vehicle_local_position_setpoint_t) > 1
         dt = mean(diff(vehicle_local_position_setpoint_t));
         fprintf('Position/velocity setpoint sampling period: %f (ms), frequency: %f (Hz) \n', dt*1000, 1/dt);
+    end
+
+    if ismember('acc_indi_active', log.data.vehicle_local_position_setpoint_0.Properties.VariableNames)
+        acc_indi_active_t = vehicle_local_position_setpoint_t;
+        acc_indi_active = logical(log.data.vehicle_local_position_setpoint_0.acc_indi_active);
+    end
+end
+
+% HoverThrustEstimator output. The controller-applied hover thrust is in
+% acceleration_indi_status; this topic is the estimator's own output.
+if isfield(log.data, 'hover_thrust_estimate_0')
+    tbl = log.data.hover_thrust_estimate_0;
+
+    if all(ismember({'timestamp', 'hover_thrust', 'valid'}, tbl.Properties.VariableNames))
+        hte_status = struct();
+        hte_status.time = get_t(tbl);
+        hte_status.hover_thrust = double(tbl.hover_thrust);
+        hte_status.valid = logical(tbl.valid);
+        hte_status.hover_thrust(~hte_status.valid) = NaN;
     end
 end
 
@@ -297,7 +317,7 @@ end
 % These variables may still exist in the caller workspace when this script is
 % run repeatedly with different logs. Clear them so that an old log without
 % the new fields cannot accidentally reuse data from the previous run.
-clear allocation_feedback allocation_filter_status
+clear allocation_feedback allocation_filter_status indi_accel_status
 
 % High-rate input/output values used by the INDI feedback path.
 if isfield(log.data, 'allocation_value_0')
@@ -396,6 +416,83 @@ if isfield(log.data, 'allocation_feedback_filter_status_0')
         allocation_filter_status.reconfigure_count(end), ...
         event_reason_text, event_reason, ...
         allocation_filter_status.configured(end));
+end
+
+% -------------------------------------------------------------------------
+% Acceleration INDI feedback status (source/validity/alignment diagnostics)
+% -------------------------------------------------------------------------
+% AccelerationIndiStatus is already logged by the flight controller. Decode it
+% here so the plotting script can compare all available a_0 sources and the
+% delayed/undelayed allocation-force acceleration without adding another ULog
+% topic.
+if isfield(log.data, 'acceleration_indi_status_0')
+    tbl = log.data.acceleration_indi_status_0;
+    indi_fields = { ...
+        'timestamp', 'timestamp_sample', 'force_timestamp', ...
+        'acceleration_feedback_0_', 'acceleration_feedback_1_', 'acceleration_feedback_2_', ...
+        'acceleration_velocity_derivative_0_', 'acceleration_velocity_derivative_1_', 'acceleration_velocity_derivative_2_', ...
+        'acceleration_ekf_0_', 'acceleration_ekf_1_', 'acceleration_ekf_2_', ...
+        'acceleration_imu_0_', 'acceleration_imu_1_', 'acceleration_imu_2_', ...
+        'allocated_thrust_acceleration_0_', 'allocated_thrust_acceleration_1_', 'allocated_thrust_acceleration_2_', ...
+        'allocated_thrust_acceleration_undelayed_0_', 'allocated_thrust_acceleration_undelayed_1_', 'allocated_thrust_acceleration_undelayed_2_', ...
+        'hover_thrust', 'force_feedback_scale', ...
+        'controller_transition_progress', 'hover_thrust_transition_progress', ...
+        'acceleration_source', 'acceleration_source_valid', 'feedback_valid', ...
+        'controller_transition_active', 'hover_thrust_transition_active'};
+
+    if all(ismember(indi_fields, tbl.Properties.VariableNames))
+        indi_accel_status = struct();
+        indi_accel_status.time = get_t(tbl);
+        indi_accel_status.time_sample = double(tbl.timestamp_sample) * 1e-6;
+        indi_accel_status.force_time = double(tbl.force_timestamp) * 1e-6;
+        indi_accel_status.feedback = [tbl.acceleration_feedback_0_, ...
+                                      tbl.acceleration_feedback_1_, ...
+                                      tbl.acceleration_feedback_2_];
+        indi_accel_status.velocity_derivative = [tbl.acceleration_velocity_derivative_0_, ...
+                                                 tbl.acceleration_velocity_derivative_1_, ...
+                                                 tbl.acceleration_velocity_derivative_2_];
+        indi_accel_status.ekf = [tbl.acceleration_ekf_0_, ...
+                                 tbl.acceleration_ekf_1_, ...
+                                 tbl.acceleration_ekf_2_];
+        indi_accel_status.imu = [tbl.acceleration_imu_0_, ...
+                                 tbl.acceleration_imu_1_, ...
+                                 tbl.acceleration_imu_2_];
+        indi_accel_status.force_accel = [tbl.allocated_thrust_acceleration_0_, ...
+                                         tbl.allocated_thrust_acceleration_1_, ...
+                                         tbl.allocated_thrust_acceleration_2_];
+        indi_accel_status.force_accel_undelayed = [tbl.allocated_thrust_acceleration_undelayed_0_, ...
+                                                   tbl.allocated_thrust_acceleration_undelayed_1_, ...
+                                                   tbl.allocated_thrust_acceleration_undelayed_2_];
+        indi_accel_status.hover_thrust = double(tbl.hover_thrust);
+        indi_accel_status.force_feedback_scale = double(tbl.force_feedback_scale);
+        indi_accel_status.controller_progress = double(tbl.controller_transition_progress);
+        indi_accel_status.hover_progress = double(tbl.hover_thrust_transition_progress);
+        indi_accel_status.source = double(tbl.acceleration_source);
+        indi_accel_status.source_valid = double(tbl.acceleration_source_valid);
+        indi_accel_status.feedback_valid = logical(tbl.feedback_valid);
+        indi_accel_status.controller_active = logical(tbl.controller_transition_active);
+        indi_accel_status.hover_active = logical(tbl.hover_thrust_transition_active);
+        indi_accel_status.force_delay = (indi_accel_status.time_sample - indi_accel_status.force_time) * 1000;
+        % Before the delayed-force history is filled, force_timestamp may be
+        % zero/old and the resulting number is not a physical delay. Keep the
+        % raw validity flag, but expose only meaningful delay samples.
+        invalid_delay = ~indi_accel_status.feedback_valid ...
+                        | ~isfinite(indi_accel_status.force_delay) ...
+                        | indi_accel_status.force_time <= 0;
+        indi_accel_status.force_delay(invalid_delay) = NaN;
+
+        finite_feedback = all(isfinite(indi_accel_status.feedback), 2);
+        fprintf(['Acceleration INDI status: %.1f Hz, valid feedback %d/%d, ' ...
+                 'force delay median %.1f ms, source=%d\n'], ...
+            1 / mean(diff(indi_accel_status.time)), ...
+            sum(indi_accel_status.feedback_valid & finite_feedback), ...
+            length(indi_accel_status.time), ...
+            median(indi_accel_status.force_delay(isfinite(indi_accel_status.force_delay))), ...
+            indi_accel_status.source(end));
+    else
+        fprintf(['acceleration_indi_status_0 is present but has an older schema; ' ...
+                 'skipping Acceleration INDI diagnostics.\n']);
+    end
 end
 
 %% =========================================================================

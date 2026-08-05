@@ -474,6 +474,77 @@ if control_fig
     end
 
     % ---------------------------------------------------------------------
+    % Acceleration INDI: applied state, a_0 sources, HTE and force scale
+    % ---------------------------------------------------------------------
+    if exist('indi_accel_status', 'var')
+        figure('Name', 'Acceleration INDI Feedback', 'Color', 'w');
+        axis_names = {'x', 'y', 'z'};
+        ax_accel_indi = [];
+
+        ax = subplot(6, 1, 1); hold on;
+        ax_accel_indi = [ax_accel_indi, ax];
+        if exist('acc_indi_active', 'var')
+            stairs(acc_indi_active_t, double(acc_indi_active), ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'acc INDI active');
+        else
+            plot(indi_accel_status.time, nan(size(indi_accel_status.time)), ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'acc INDI active (not logged)');
+        end
+        ylim([-0.05, 1.05]); yticks([0, 1]);
+        grid on; ylabel('Active');
+        title('Acceleration INDI actually produced the thrust setpoint');
+        legend('Location', 'best');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        for axis_idx = 1:3
+            ax = subplot(6, 1, axis_idx + 1); hold on;
+            ax_accel_indi = [ax_accel_indi, ax];
+            plot(indi_accel_status.time, indi_accel_status.feedback(:, axis_idx), ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Current $a_0$');
+            plot(indi_accel_status.time, indi_accel_status.velocity_derivative(:, axis_idx), ...
+                STYLE_AXIS2_THIN{:}, 'DisplayName', 'Velocity derivative');
+            plot(indi_accel_status.time, indi_accel_status.ekf(:, axis_idx), ...
+                STYLE_AXIS3_THIN{:}, 'DisplayName', 'EKF acceleration');
+            plot(indi_accel_status.time, indi_accel_status.imu(:, axis_idx), ...
+                STYLE_AXIS4_DOT{:}, 'DisplayName', 'IMU acceleration');
+            grid on; ylabel(sprintf('$a_{0,%s}$ (m/s$^2$)', axis_names{axis_idx}));
+            title(sprintf('$a_0$ source comparison (%s axis)', axis_names{axis_idx}));
+            if axis_idx == 1
+                legend('Location', 'best');
+            end
+            add_standard_background(vis_flight_intervals, vis_flight_names, ...
+                vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+        end
+
+        ax = subplot(6, 1, 5); hold on;
+        ax_accel_indi = [ax_accel_indi, ax];
+        if exist('hte_status', 'var')
+            plot(hte_status.time, hte_status.hover_thrust, ...
+                STYLE_AXIS1_BOLD{:}, 'DisplayName', 'HTE estimate');
+        end
+        plot(indi_accel_status.time, indi_accel_status.hover_thrust, ...
+            STYLE_AXIS2_BOLD{:}, 'DisplayName', 'Applied hover thrust');
+        grid on; ylabel('Normalized thrust');
+        title('Hover thrust: estimator output and controller-applied value');
+        legend('Location', 'best');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        ax = subplot(6, 1, 6); hold on;
+        ax_accel_indi = [ax_accel_indi, ax];
+        plot(indi_accel_status.time, indi_accel_status.force_feedback_scale, ...
+            STYLE_AXIS1_BOLD{:}, 'DisplayName', 'Force feedback scale');
+        grid on; ylabel('Scale'); xlabel('Time (s)');
+        title('Allocation-force scale used by acceleration INDI');
+        legend('Location', 'best');
+        add_standard_background(vis_flight_intervals, vis_flight_names, ...
+            vis_is_vtol, vis_vtol_intervals, vis_vtol_names);
+
+        linkaxes(ax_accel_indi, 'x');
+    end
+
+    % ---------------------------------------------------------------------
     % Figure 6/7/8: Actuators & PWM
     % ---------------------------------------------------------------------
     if dynamic_control_alloc
