@@ -120,10 +120,14 @@ STYLE_RES = {'Color', GINDI_BLUE, 'LineStyle', '-', 'LineWidth', 0.50};
 fig_traj = figure('Name', '3-D trajectory tracking', 'Color', 'w', ...
     'Units', 'centimeters', 'Position', [0, 0, 7, 5]);
 ax_traj = axes(fig_traj); hold(ax_traj, 'on');
+% A dense 3-D line can make MATLAB's native '--' renderer appear solid.
+% Draw the reference as explicit arc-length dash segments, as in
+% plot_paper_figures.m, and use a NaN proxy for its legend entry.
+plot3DashedHidden(ax_traj, pos_sp(use_pos_sp, :).', 1.00, 0.50, ...
+    'Color', REFERENCE_ORANGE, 'LineWidth', 0.80);
+h_traj_sp = plot3(ax_traj, NaN, NaN, NaN, STYLE_SP{:});
 h_traj_res = plot3(ax_traj, pos_pv(use_pos_pv, 1), ...
     pos_pv(use_pos_pv, 2), pos_pv(use_pos_pv, 3), STYLE_RES{:});
-h_traj_sp = plot3(ax_traj, pos_sp(use_pos_sp, 1), ...
-    pos_sp(use_pos_sp, 2), pos_sp(use_pos_sp, 3), STYLE_SP{:});
 xlabel(ax_traj, '$p_x$ (m)');
 ylabel(ax_traj, '$p_y$ (m)');
 zlabel(ax_traj, '$-p_z$ (m)');
@@ -134,7 +138,7 @@ zticks(ax_traj, 0:2:6);
 daspect(ax_traj, [1, 1, 1]);
 lgd = legend(ax_traj, [h_traj_sp, h_traj_res], ...
     {'Reference', 'Response'}, 'Location', 'best', 'NumColumns', 2);
-lgd.ItemTokenSize = [14, 8];
+lgd.ItemTokenSize = [20, 8];
 lgd.Position = [0.288192769567176 0.757763726455958 ...
     0.450828360552763 0.0675616197183098];
 PlotToFile(fig_traj, output_trajectory_pdf, 7, 5);
@@ -257,4 +261,51 @@ function rmse = tracking_rmse(t_sp, y_sp, t_pv, y_pv, wrap_yaw)
         err(:, 3) = atan2(sin(err(:, 3)), cos(err(:, 3)));
     end
     rmse = sqrt(mean(err.^2, 1, 'omitnan'));
+end
+
+function h = plot3DashedHidden(ax, p, dashPeriod, duty, varargin)
+%PLOT3DASHEDHIDDEN Draw a 3-D polyline with reliable arc-length dashes.
+% Native dashed rendering can disappear on dense vector trajectories, so
+% each visible dash is emitted as its own short solid line segment.
+
+    p = double(p);
+    valid = all(isfinite(p), 1);
+    p = p(:, valid);
+
+    if size(p, 2) < 2
+        h = gobjects(0);
+        return;
+    end
+
+    ds = sqrt(sum(diff(p, 1, 2).^2, 1));
+    s = [0, cumsum(ds)];
+    [s, ia] = unique(s, 'stable');
+    p = p(:, ia);
+
+    dashLength = dashPeriod * duty;
+    totalLength = s(end);
+    holdState = ishold(ax);
+    hold(ax, 'on');
+    h = gobjects(0);
+
+    for s0 = 0:dashPeriod:totalLength
+        s1 = min(s0 + dashLength, totalLength);
+        q0 = interpPointByArcLength(p, s, s0);
+        q1 = interpPointByArcLength(p, s, s1);
+        inside = s > s0 & s < s1;
+        q = [q0, p(:, inside), q1];
+        h(end+1) = plot3(ax, q(1,:), q(2,:), q(3,:), ...
+            'LineStyle', '-', 'HandleVisibility', 'off', varargin{:});
+    end
+
+    if ~holdState
+        hold(ax, 'off');
+    end
+end
+
+function q = interpPointByArcLength(p, s, sq)
+    q = zeros(3, 1);
+    for k = 1:3
+        q(k) = interp1(s, p(k,:), sq, 'linear');
+    end
 end
