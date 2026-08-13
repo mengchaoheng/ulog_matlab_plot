@@ -86,11 +86,11 @@ if(exist('XYZ', 'var') && exist('XYZ_setpoint', 'var') && ...
     'PaperPositionMode', 'auto', ...
     'InvertHardcopy', 'off');
 
-    % Start times are arranged as [PX4, PINDI, GINDI]
+    % Start times are arranged as [Baseline, PINDI, GINDI]
     start_time=30;
     segment_start_times = [start_time, start_time+35, start_time+35*2];    % s
     segment_duration    = 20;                % s
-    segment_names       = {'Geometric Control', 'PINDI', 'GINDI'};
+    segment_names       = {'Baseline', 'PINDI', 'GINDI'};
     STYLE_1 = {'Color', [0.494, 0.184, 0.556], ...
                   'LineStyle', '--', ...
                   'LineWidth', 0.5};

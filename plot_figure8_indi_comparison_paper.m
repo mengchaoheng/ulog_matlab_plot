@@ -16,8 +16,6 @@ orbit_nav_state = 21;
 number_of_periods = 1;
 fallback_omega = 0.25;       % rad/s, only used if automatic detection fails
 phase_samples = 1201;
-lag_search_limit = 1.0;      % s
-lag_search_step = 0.005;     % s
 assert(number_of_periods == 1, ...
     'Phase-aligned paper plots currently require number_of_periods = 1.');
 
@@ -127,6 +125,7 @@ for k = 1:3
     c.window = [time_grid(1), time_grid(end)];
     c.time = time_grid;
     c.phase = phase;
+    c.plot_time = phase / omega;
     c.plot_order = plot_order;
     c.position_ref = interp_series(t_traj, position_ref_all, time_grid);
     c.velocity_ref = interp_series(t_traj, velocity_ref_all, time_grid);
@@ -143,36 +142,27 @@ for k = 1:3
         double(rate_status_tbl.indi_active), c.window);
     c.name = identify_algorithm(c.acc_indi_fraction, c.rate_indi_fraction);
 
-    c.position_error = c.position - c.position_ref;
-    c.velocity_error = c.velocity - c.velocity_ref;
+    % Error notation follows main.tex:
+    %   e_p = p_r - p, e_v = v_r - v,
+    %   e_R = R_c \ominus R, e_omega = omega_r^b - omega^b.
+    c.position_error = c.position_ref - c.position;
+    c.velocity_error = c.velocity_ref - c.velocity;
     c.position_error_xy = vecnorm(c.position_error(:, 1:2), 2, 2);
     c.velocity_error_xy = vecnorm(c.velocity_error(:, 1:2), 2, 2);
 
-    % Positive height error means the aircraft is below the requested height.
-    % In NED coordinates h_ref-h = z-z_ref.
     c.height_error = c.position_error(:, 3);
     c.vertical_velocity_error = c.velocity_error(:, 3);
-
-    tangent = c.velocity_ref(:, 1:2);
-    tangent = tangent ./ max(vecnorm(tangent, 2, 2), eps);
-    normal = [-tangent(:, 2), tangent(:, 1)];
-    c.along_error = sum(c.position_error(:, 1:2) .* tangent, 2);
-    c.cross_error = sum(c.position_error(:, 1:2) .* normal, 2);
 
     q_dot = abs(sum(c.q_sp .* c.q, 2));
     c.attitude_error = 2 * acos(constrain(q_dot, 0, 1));
     c.rate_error = vecnorm(c.rate_sp - c.rate, 2, 2);
-
-    [c.equivalent_delay, c.delay_corrected_xy_rmse] = estimate_xy_delay( ...
-        t_traj, position_ref_all(:, 1:2), time_grid, c.position(:, 1:2), ...
-        lag_search_limit, lag_search_step);
 
     c.metrics = calculate_metrics(c);
     chronological_cases(k) = c;
 end
 
 % Always present algorithms in the conceptual order used in the paper.
-desired_order = {'Baseline', 'Rate INDI', 'Dual INDI'};
+desired_order = {'Baseline', 'PINDI', 'GINDI'};
 cases = repmat(empty_case(), 1, 3);
 
 for k = 1:3
@@ -189,11 +179,6 @@ height_rmse_m = arrayfun(@(c) c.metrics.height_rmse, cases).';
 vertical_velocity_rmse_mps = arrayfun(@(c) c.metrics.vertical_velocity_rmse, cases).';
 attitude_rmse_deg = arrayfun(@(c) c.metrics.attitude_rmse_deg, cases).';
 angular_rate_rmse_radps = arrayfun(@(c) c.metrics.rate_rmse, cases).';
-along_track_rmse_m = arrayfun(@(c) c.metrics.along_rmse, cases).';
-cross_track_rmse_m = arrayfun(@(c) c.metrics.cross_rmse, cases).';
-equivalent_delay_s = arrayfun(@(c) c.equivalent_delay, cases).';
-delay_corrected_xy_rmse_m = arrayfun(@(c) c.delay_corrected_xy_rmse, cases).';
-
 baseline = [xy_position_rmse_m(1), xy_velocity_rmse_mps(1), ...
     height_rmse_m(1), vertical_velocity_rmse_mps(1), ...
     attitude_rmse_deg(1), angular_rate_rmse_radps(1)];
@@ -203,15 +188,13 @@ improvement_percent = 100 * (1 - values ./ baseline);
 
 metrics_table = table(algorithm, xy_position_rmse_m, xy_velocity_rmse_mps, ...
     height_rmse_m, vertical_velocity_rmse_mps, attitude_rmse_deg, ...
-    angular_rate_rmse_radps, along_track_rmse_m, cross_track_rmse_m, ...
-    equivalent_delay_s, delay_corrected_xy_rmse_m, ...
+    angular_rate_rmse_radps, ...
     improvement_percent(:, 1), improvement_percent(:, 2), ...
     improvement_percent(:, 3), improvement_percent(:, 4), ...
     improvement_percent(:, 5), improvement_percent(:, 6), ...
     'VariableNames', {'Algorithm', 'XYPositionRMSE_m', 'XYVelocityRMSE_mps', ...
     'HeightRMSE_m', 'VerticalVelocityRMSE_mps', 'AttitudeRMSE_deg', ...
-    'AngularRateRMSE_radps', 'AlongTrackRMSE_m', 'CrossTrackRMSE_m', ...
-    'EquivalentDelay_s', 'DelayCorrectedXYRMSE_m', ...
+    'AngularRateRMSE_radps', ...
     'XYPositionImprovement_pct', 'XYVelocityImprovement_pct', ...
     'HeightImprovement_pct', 'VerticalVelocityImprovement_pct', ...
     'AttitudeImprovement_pct', 'AngularRateImprovement_pct'});
@@ -228,9 +211,9 @@ end
 %% Paper style
 addpath(root_dir);
 set(groot, ...
-    'defaultAxesFontSize', 7, ...
+    'defaultAxesFontSize', 6, ...
     'defaultAxesFontName', 'Times New Roman', ...
-    'defaultAxesLineWidth', 0.4, ...
+    'defaultAxesLineWidth', 0.5, ...
     'defaultAxesLabelFontSizeMultiplier', 1, ...
     'defaultAxesTitleFontSizeMultiplier', 1, ...
     'defaultTextFontName', 'Times New Roman', ...
@@ -239,171 +222,148 @@ set(groot, ...
     'defaultLegendInterpreter', 'latex', ...
     'defaultAxesTickLabelInterpreter', 'latex');
 
-COLORS.reference = [0.15, 0.15, 0.15];
-COLORS.baseline = [0.45, 0.45, 0.45];
-COLORS.rate = [0.850, 0.325, 0.098];
-COLORS.dual = [0.000, 0.447, 0.741];
-case_colors = [COLORS.baseline; COLORS.rate; COLORS.dual];
-case_styles = {':', '--', '-'};
-line_widths = [0.95, 0.95, 1.15];
+% Match the comparison styles in plot_case2_for_GINDI.m exactly:
+%   algorithm 1: purple dashed,       0.5 pt
+%   algorithm 2: orange dash-dot,     0.5 pt
+%   algorithm 3: blue solid,          0.7 pt
+% The common reference follows that file's setpoint style.
+sty = plot_style_manager();
+STYLE_REFERENCE = plot_style(sty, 'setpoint1', '--', 0.8);
+STYLE_BASELINE = {'Color', [0.494, 0.184, 0.556], ...
+    'LineStyle', '--', 'LineWidth', 0.5};
+STYLE_RATE_INDI = {'Color', [0.96, 0.62, 0.26], ...
+    'LineStyle', '-.', 'LineWidth', 0.5};
+STYLE_DUAL_INDI = {'Color', [0.000, 0.447, 0.741], ...
+    'LineStyle', '-', 'LineWidth', 0.7};
+case_plot_styles = {STYLE_BASELINE, STYLE_RATE_INDI, STYLE_DUAL_INDI};
 
-%% Figure 1: phase-aligned XY trajectory small multiples
-relative_reference = cell(1, 3);
-relative_response = cell(1, 3);
-all_xy = [];
+%% Figure 1: phase-aligned XY trajectories as three LaTeX subfigures
+trajectory_reference = cell(1, 3);
+trajectory_response = cell(1, 3);
+trajectory_file_stems = {'baseline', 'pindi', 'gindi'};
 
 for k = 1:3
-    center = 0.5 * (max(cases(k).position_ref(:, 1:2), [], 1) + ...
-        min(cases(k).position_ref(:, 1:2), [], 1));
     order = cases(k).plot_order;
-    relative_reference{k} = cases(k).position_ref(order, 1:2) - center;
-    relative_response{k} = cases(k).position(order, 1:2) - center;
-    all_xy = [all_xy; relative_reference{k}; relative_response{k}]; %#ok<AGROW>
+    trajectory_reference{k} = cases(k).position_ref(order, 1:2);
+    trajectory_response{k} = cases(k).position(order, 1:2);
 end
 
-xy_min = min(all_xy, [], 1);
-xy_max = max(all_xy, [], 1);
-xy_pad = 0.06 * max(xy_max - xy_min);
-
-fig_xy = figure('Name', 'Figure-eight XY comparison', 'Color', 'w', ...
-    'Units', 'centimeters', 'Position', [0, 0, 17.8, 5.8]);
-tl_xy = tiledlayout(fig_xy, 1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
-
 for k = 1:3
-    ax = nexttile(tl_xy); hold(ax, 'on');
-    h_ref = plot(ax, relative_reference{k}(:, 1), relative_reference{k}(:, 2), ...
-        '--', 'Color', COLORS.reference, 'LineWidth', 0.85);
-    h_res = plot(ax, relative_response{k}(:, 1), relative_response{k}(:, 2), ...
-        case_styles{k}, 'Color', case_colors(k, :), 'LineWidth', line_widths(k));
-    plot(ax, relative_reference{k}(1, 1), relative_reference{k}(1, 2), 'o', ...
-        'Color', COLORS.reference, 'MarkerSize', 3, 'HandleVisibility', 'off');
+    fig_xy = figure('Name', sprintf('Figure-eight XY %s', cases(k).name), ...
+        'Color', 'w', 'Units', 'centimeters', 'Position', [0, 0, 5.0, 5.0], ...
+        'PaperUnits', 'centimeters', 'PaperSize', [5.0, 5.0], ...
+        'PaperPosition', [0, 0, 5.0, 5.0], 'PaperPositionMode', 'auto', ...
+        'InvertHardcopy', 'off');
+    ax = axes(fig_xy); hold(ax, 'on');
+    h_ref = plot(ax, trajectory_reference{k}(:, 1), trajectory_reference{k}(:, 2), ...
+        STYLE_REFERENCE{:});
+    h_res = plot(ax, trajectory_response{k}(:, 1), trajectory_response{k}(:, 2), ...
+        case_plot_styles{k}{:});
+    plot(ax, trajectory_reference{k}(1, 1), trajectory_reference{k}(1, 2), 'o', ...
+        'Color', sty.color.setpoint1, 'MarkerSize', 3, 'HandleVisibility', 'off');
     axis(ax, 'equal'); grid(ax, 'on'); box(ax, 'on');
+    xy = [trajectory_reference{k}; trajectory_response{k}];
+    xy_min = min(xy, [], 1);
+    xy_max = max(xy, [], 1);
+    xy_pad = 0.06 * max(xy_max - xy_min);
     xlim(ax, [xy_min(1) - xy_pad, xy_max(1) + xy_pad]);
     ylim(ax, [xy_min(2) - xy_pad, xy_max(2) + xy_pad]);
-    xlabel(ax, '$p_x-p_{x,c}$ (m)');
-    if k == 1
-        ylabel(ax, '$p_y-p_{y,c}$ (m)');
-    end
-    title(ax, cases(k).name);
-    text(ax, 0.03, 0.05, sprintf('$e_{p,xy}=%.3f$ m', ...
-        cases(k).metrics.xy_position_rmse), 'Units', 'normalized', ...
-        'VerticalAlignment', 'bottom');
+    xlabel(ax, '$p_x$ (m)');
+    ylabel(ax, '$p_y$ (m)');
+    lgd = legend(ax, [h_ref, h_res], {'Reference', 'Response'}, ...
+        'Location', 'north', 'NumColumns', 1);
+    lgd.ItemTokenSize = [20, 7];
 
-    if k == 1
-        lgd = legend(ax, [h_ref, h_res], {'Reference', 'Response'}, ...
-            'Location', 'northoutside', 'NumColumns', 2);
-        lgd.ItemTokenSize = [13, 7];
-    end
+    PlotToFile(fig_xy, fullfile(output_dir, sprintf( ...
+        'figure8_xy_tracking_%s.pdf', trajectory_file_stems{k})), 5.2, 5.0);
 end
 
-PlotToFile(fig_xy, fullfile(output_dir, 'figure8_xy_tracking_comparison.pdf'), 17.8, 5.8);
-
-%% Figure 2: translational tracking errors versus trajectory phase
+%% Figure 2: translational tracking errors versus time
 fig_trans = figure('Name', 'Figure-eight translation errors', 'Color', 'w', ...
-    'Units', 'centimeters', 'Position', [0, 0, 12.0, 11.0]);
+    'Units', 'centimeters', 'Position', [0, 0, 7.0, 9.0], ...
+    'PaperUnits', 'centimeters', 'PaperSize', [7.0, 9.0], ...
+    'PaperPosition', [0, 0, 7.0, 9.0], 'PaperPositionMode', 'auto', ...
+    'InvertHardcopy', 'off');
 tl_trans = tiledlayout(fig_trans, 4, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
 trans_data = { ...
+    % Vector-valued horizontal errors are shown by their Euclidean norms.
     @(c) c.position_error_xy, ...
     @(c) c.velocity_error_xy, ...
+    % Scalar vertical errors retain their signs to expose bias and direction.
     @(c) 100 * c.height_error, ...
     @(c) 100 * c.vertical_velocity_error};
-trans_labels = {'Horizontal position error (m)', 'Horizontal velocity error (m/s)', ...
-    '$e_h$ (cm)', '$e_{v_h}$ (cm/s)'};
+trans_labels = {'$||\mathbf{e}_{p,xy}||$ (m)', '$||\mathbf{e}_{v,xy}||$ (m/s)', ...
+    '$e_{p,z}$ (cm)', '$e_{v,z}$ (cm/s)'};
+trans_error_is_signed = [false, false, true, true];
 ax_trans = gobjects(1, 4);
 
 for row = 1:4
     ax_trans(row) = nexttile(tl_trans); hold(ax_trans(row), 'on');
     for k = 1:3
         y = trans_data{row}(cases(k));
-        plot(ax_trans(row), cases(k).phase * 180 / pi, y(cases(k).plot_order), ...
-            case_styles{k}, 'Color', case_colors(k, :), 'LineWidth', line_widths(k));
+        plot(ax_trans(row), cases(k).plot_time, y(cases(k).plot_order), ...
+            case_plot_styles{k}{:});
     end
-    yline(ax_trans(row), 0, '-', 'Color', [0.75, 0.75, 0.75], ...
-        'LineWidth', 0.35, 'HandleVisibility', 'off');
+    if trans_error_is_signed(row)
+        yline(ax_trans(row), 0, '-', 'Color', [0.75, 0.75, 0.75], ...
+            'LineWidth', 0.35, 'HandleVisibility', 'off');
+    end
     ylabel(ax_trans(row), trans_labels{row});
-    xlim(ax_trans(row), [0, 360 * number_of_periods]);
-    xticks(ax_trans(row), 0:120:360 * number_of_periods);
+    xlim(ax_trans(row), [0, window_duration]);
+    xticks(ax_trans(row), 0:5:window_duration);
     grid(ax_trans(row), 'on'); box(ax_trans(row), 'on');
 end
 
-lgd = legend(ax_trans(1), {cases.name}, 'Location', 'northoutside', 'NumColumns', 3);
-lgd.ItemTokenSize = [15, 7];
-xlabel(ax_trans(end), 'Trajectory phase $\theta$ (deg)');
+lgd = legend(ax_trans(1), {cases.name}, 'Location', 'north', 'NumColumns', 3);
+lgd.ItemTokenSize = [20, 7];
+xlabel(ax_trans(end), 'Time (s)');
 linkaxes(ax_trans, 'x');
-PlotToFile(fig_trans, fullfile(output_dir, 'figure8_translation_errors.pdf'), 12.0, 11.0);
+PlotToFile(fig_trans, fullfile(output_dir, 'figure8_translation_errors.pdf'), 7.0, 9.0);
 
-%% Figure 3: along-track and cross-track position errors
-fig_path = figure('Name', 'Figure-eight path error decomposition', 'Color', 'w', ...
-    'Units', 'centimeters', 'Position', [0, 0, 12.0, 6.4]);
-tl_path = tiledlayout(fig_path, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
-path_data = {@(c) c.along_error, @(c) c.cross_error};
-path_labels = {'Along-track error $e_{\parallel}$ (m)', ...
-    'Cross-track error $e_{\perp}$ (m)'};
-ax_path = gobjects(1, 2);
-
-for row = 1:2
-    ax_path(row) = nexttile(tl_path); hold(ax_path(row), 'on');
-    for k = 1:3
-        y = path_data{row}(cases(k));
-        plot(ax_path(row), cases(k).phase * 180 / pi, y(cases(k).plot_order), ...
-            case_styles{k}, 'Color', case_colors(k, :), 'LineWidth', line_widths(k));
-    end
-    yline(ax_path(row), 0, '-', 'Color', [0.75, 0.75, 0.75], ...
-        'LineWidth', 0.35, 'HandleVisibility', 'off');
-    ylabel(ax_path(row), path_labels{row});
-    xlim(ax_path(row), [0, 360 * number_of_periods]);
-    xticks(ax_path(row), 0:120:360 * number_of_periods);
-    grid(ax_path(row), 'on'); box(ax_path(row), 'on');
-end
-
-lgd = legend(ax_path(1), {cases.name}, 'Location', 'northoutside', 'NumColumns', 3);
-lgd.ItemTokenSize = [15, 7];
-xlabel(ax_path(end), 'Trajectory phase $\theta$ (deg)');
-linkaxes(ax_path, 'x');
-PlotToFile(fig_path, fullfile(output_dir, 'figure8_path_error_decomposition.pdf'), 12.0, 6.4);
-
-%% Figure 4: rotational inner-loop tracking errors
+%% Figure 3: rotational inner-loop tracking errors
 fig_rot = figure('Name', 'Figure-eight rotational errors', 'Color', 'w', ...
-    'Units', 'centimeters', 'Position', [0, 0, 12.0, 6.4]);
+    'Units', 'centimeters', 'Position', [0, 0, 7.0, 5.5], ...
+    'PaperUnits', 'centimeters', 'PaperSize', [7.0, 5.5], ...
+    'PaperPosition', [0, 0, 7.0, 5.5], 'PaperPositionMode', 'auto', ...
+    'InvertHardcopy', 'off');
 tl_rot = tiledlayout(fig_rot, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+% Both rotational errors are vector-valued and are shown by their norms.
 rot_data = {@(c) c.attitude_error * 180 / pi, @(c) c.rate_error};
-rot_labels = {'Attitude geodesic error $e_R$ (deg)', ...
-    'Angular-rate error (rad/s)'};
+rot_labels = {'$||\mathbf{e}_{R}||$ (deg)', '$||\mathbf{e}_{\omega}||$ (rad/s)'};
 ax_rot = gobjects(1, 2);
 
 for row = 1:2
     ax_rot(row) = nexttile(tl_rot); hold(ax_rot(row), 'on');
     for k = 1:3
         y = rot_data{row}(cases(k));
-        plot(ax_rot(row), cases(k).phase * 180 / pi, y(cases(k).plot_order), ...
-            case_styles{k}, 'Color', case_colors(k, :), 'LineWidth', line_widths(k));
+        plot(ax_rot(row), cases(k).plot_time, y(cases(k).plot_order), ...
+            case_plot_styles{k}{:});
     end
     ylabel(ax_rot(row), rot_labels{row});
-    xlim(ax_rot(row), [0, 360 * number_of_periods]);
-    xticks(ax_rot(row), 0:120:360 * number_of_periods);
+    xlim(ax_rot(row), [0, window_duration]);
+    xticks(ax_rot(row), 0:5:window_duration);
     grid(ax_rot(row), 'on'); box(ax_rot(row), 'on');
 end
 
-lgd = legend(ax_rot(1), {cases.name}, 'Location', 'northoutside', 'NumColumns', 3);
-lgd.ItemTokenSize = [15, 7];
-xlabel(ax_rot(end), 'Trajectory phase $\theta$ (deg)');
+lgd = legend(ax_rot(1), {cases.name}, 'Location', 'north', 'NumColumns', 3);
+lgd.ItemTokenSize = [20, 7];
+xlabel(ax_rot(end), 'Time (s)');
 linkaxes(ax_rot, 'x');
-PlotToFile(fig_rot, fullfile(output_dir, 'figure8_rotational_errors.pdf'), 12.0, 6.4);
+PlotToFile(fig_rot, fullfile(output_dir, 'figure8_rotational_errors.pdf'), 7.0, 5.5);
 
 fprintf('Saved paper outputs to:\n  %s\n', output_dir);
 
 %% Local helpers
 function c = empty_case()
     c = struct('name', '', 'interval', [NaN, NaN], 'window', [NaN, NaN], ...
-        'time', [], 'phase', [], 'plot_order', [], 'position_ref', [], 'velocity_ref', [], ...
+        'time', [], 'phase', [], 'plot_time', [], 'plot_order', [], ...
+        'position_ref', [], 'velocity_ref', [], ...
         'position', [], 'velocity', [], 'q_sp', [], 'q', [], ...
         'rate_sp', [], 'rate', [], 'position_error', [], ...
         'velocity_error', [], 'position_error_xy', [], ...
         'velocity_error_xy', [], 'height_error', [], ...
-        'vertical_velocity_error', [], 'along_error', [], ...
-        'cross_error', [], 'attitude_error', [], 'rate_error', [], ...
+        'vertical_velocity_error', [], 'attitude_error', [], 'rate_error', [], ...
         'acc_indi_fraction', NaN, 'rate_indi_fraction', NaN, ...
-        'equivalent_delay', NaN, 'delay_corrected_xy_rmse', NaN, ...
         'metrics', struct());
 end
 
@@ -474,9 +434,9 @@ end
 
 function name = identify_algorithm(acc_fraction, rate_fraction)
     if acc_fraction > 0.9 && rate_fraction > 0.9
-        name = 'Dual INDI';
+        name = 'GINDI';
     elseif acc_fraction < 0.1 && rate_fraction > 0.9
-        name = 'Rate INDI';
+        name = 'PINDI';
     elseif acc_fraction < 0.1 && rate_fraction < 0.1
         name = 'Baseline';
     else
@@ -492,23 +452,6 @@ function m = calculate_metrics(c)
     m.vertical_velocity_rmse = sqrt(mean(c.vertical_velocity_error.^2, 'omitnan'));
     m.attitude_rmse_deg = sqrt(mean((c.attitude_error * 180 / pi).^2, 'omitnan'));
     m.rate_rmse = sqrt(mean(c.rate_error.^2, 'omitnan'));
-    m.along_rmse = sqrt(mean(c.along_error.^2, 'omitnan'));
-    m.cross_rmse = sqrt(mean(c.cross_error.^2, 'omitnan'));
-end
-
-function [best_delay, best_rmse] = estimate_xy_delay(t_ref, p_ref, t, p, limit, step)
-    delays = (-limit:step:limit).';
-    costs = NaN(size(delays));
-
-    for k = 1:numel(delays)
-        % Positive delay means the response matches an earlier reference.
-        delayed_reference = interp_series(t_ref, p_ref, t - delays(k));
-        error = p - delayed_reference;
-        costs(k) = sqrt(mean(sum(error.^2, 2), 'omitnan'));
-    end
-
-    [best_rmse, idx] = min(costs);
-    best_delay = delays(idx);
 end
 
 
