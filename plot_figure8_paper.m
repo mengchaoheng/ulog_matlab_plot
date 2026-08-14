@@ -4,15 +4,15 @@ clear; close all; clc;
 root_dir = fileparts(mfilename('fullpath'));
 mat_file = fullfile(root_dir, 'data', ...
     'log_37_2026-8-10-19-19-22.mat');
+output_dir = fullfile(root_dir, 'results');
+output_trajectory_pdf = fullfile(output_dir, 'figure8_tracking_realflight.pdf');
+output_velocity_pdf = fullfile(output_dir, 'figure8_velocity_tracking_realflight.pdf');
+output_attitude_pdf = fullfile(output_dir, 'figure8_attitude_tracking_realflight.pdf');
+output_rate_pdf = fullfile(output_dir, 'figure8_rate_tracking_realflight.pdf');
 
-output_trajectory_pdf = fullfile(root_dir, 'results', ...
-    'figure8_tracking_realflight.pdf');
-output_velocity_pdf = fullfile(root_dir, 'results', ...
-    'figure8_velocity_tracking_realflight.pdf');
-output_attitude_pdf = fullfile(root_dir, 'results', ...
-    'figure8_attitude_tracking_realflight.pdf');
-output_rate_pdf = fullfile(root_dir, 'results', ...
-    'figure8_rate_tracking_realflight.pdf');
+if ~exist(output_dir, 'dir')
+    mkdir(output_dir);
+end
 
 % Translational flight window: two complete figure-eight periods.
 t_start  = 57.60;
@@ -102,19 +102,17 @@ set(groot, ...
     'defaultAxesFontName', 'Times New Roman', ...
     'defaultAxesLineWidth', 0.35, ...
     'defaultAxesLabelFontSizeMultiplier', 1, ...
-    'defaultAxesTitleFontSizeMultiplier', 1, ...
     'defaultTextFontName', 'Times New Roman', ...
     'defaultLegendFontName', 'Times New Roman', ...
     'defaultTextInterpreter', 'latex', ...
     'defaultLegendInterpreter', 'latex', ...
     'defaultAxesTickLabelInterpreter', 'latex');
 
-% Match the actual/reference styling used in
-% /Users/mch/Proj/UAV_Algorithm_Benchmark/plot_paper_figures.m.
-GINDI_BLUE = [0.000, 0.447, 0.741];
-REFERENCE_ORANGE = [0.850, 0.325, 0.098];
-STYLE_SP  = {'Color', REFERENCE_ORANGE, 'LineStyle', '--', 'LineWidth', 0.80};
-STYLE_RES = {'Color', GINDI_BLUE, 'LineStyle', '-', 'LineWidth', 0.50};
+% RGB color, line style, and line width (pt).
+reference_color = [0.850, 0.325, 0.098];
+response_color = [0.000, 0.447, 0.741];
+reference_style = {'Color', reference_color, 'LineStyle', '--', 'LineWidth', 0.8};
+response_style = {'Color', response_color, 'LineStyle', '-', 'LineWidth', 0.5};
 
 %% Figure 1: 3-D position tracking
 fig_traj = figure('Name', '3-D trajectory tracking', 'Color', 'w', ...
@@ -124,10 +122,10 @@ ax_traj = axes(fig_traj); hold(ax_traj, 'on');
 % Draw the reference as explicit arc-length dash segments, as in
 % plot_paper_figures.m, and use a NaN proxy for its legend entry.
 plot3DashedHidden(ax_traj, pos_sp(use_pos_sp, :).', 1.00, 0.50, ...
-    'Color', REFERENCE_ORANGE, 'LineWidth', 0.80);
-h_traj_sp = plot3(ax_traj, NaN, NaN, NaN, STYLE_SP{:});
+    'Color', reference_color, 'LineWidth', 0.8);
+h_traj_sp = plot3(ax_traj, NaN, NaN, NaN, reference_style{:});
 h_traj_res = plot3(ax_traj, pos_pv(use_pos_pv, 1), ...
-    pos_pv(use_pos_pv, 2), pos_pv(use_pos_pv, 3), STYLE_RES{:});
+    pos_pv(use_pos_pv, 2), pos_pv(use_pos_pv, 3), response_style{:});
 xlabel(ax_traj, '$p_x$ (m)');
 ylabel(ax_traj, '$p_y$ (m)');
 zlabel(ax_traj, '$-p_z$ (m)');
@@ -141,7 +139,7 @@ lgd = legend(ax_traj, [h_traj_sp, h_traj_res], ...
 lgd.ItemTokenSize = [20, 8];
 lgd.Position = [0.288192769567176 0.757763726455958 ...
     0.450828360552763 0.0675616197183098];
-PlotToFile(fig_traj, output_trajectory_pdf, 7, 5);
+export_paper_figure(fig_traj, output_trajectory_pdf, 7, 5);
 
 %% Figure 2: velocity tracking
 fig_vel = figure('Name', 'Velocity tracking', 'Color', 'w', ...
@@ -153,9 +151,9 @@ ax_vel = gobjects(1, 3);
 for k = 1:3
     ax_vel(k) = nexttile(tl_vel); hold(ax_vel(k), 'on');
     h_vel_res = plot(ax_vel(k), t_pos_pv(use_vel_pv) - t_start, ...
-        vel_pv(use_vel_pv, k), STYLE_RES{:});
+        vel_pv(use_vel_pv, k), response_style{:});
     h_vel_sp = plot(ax_vel(k), t_pos_sp(use_vel_sp) - t_start, ...
-        vel_sp(use_vel_sp, k), STYLE_SP{:});
+        vel_sp(use_vel_sp, k), reference_style{:});
     ylabel(ax_vel(k), vel_labels{k});
     xlim(ax_vel(k), [0, n_cycles * period]);
     grid(ax_vel(k), 'on'); box(ax_vel(k), 'on');
@@ -168,7 +166,7 @@ lgd_vel = legend(ax_vel(3), [h_vel_sp, h_vel_res], ...
 lgd_vel.ItemTokenSize = [14, 8];
 xlabel(ax_vel(3), 'Time (s)');
 linkaxes(ax_vel, 'x');
-PlotToFile(fig_vel, output_velocity_pdf, 7, 6);
+export_paper_figure(fig_vel, output_velocity_pdf, 7, 6);
 
 %% Figure 3: attitude tracking
 idx_att_sp = decimated_indices(use_att_sp, attitude_setpoint_step);
@@ -186,9 +184,9 @@ ax_att = gobjects(1, 3);
 for k = 1:3
     ax_att(k) = nexttile(tl_att); hold(ax_att(k), 'on');
     h_att_res = plot(ax_att(k), t_att_pv(idx_att_pv) - state_t_start, ...
-        att_pv(idx_att_pv, k) * 180 / pi, STYLE_RES{:});
+        att_pv(idx_att_pv, k) * 180 / pi, response_style{:});
     h_att_sp = plot(ax_att(k), t_att_sp(idx_att_sp) - state_t_start, ...
-        att_sp(idx_att_sp, k) * 180 / pi, STYLE_SP{:});
+        att_sp(idx_att_sp, k) * 180 / pi, reference_style{:});
     ylabel(ax_att(k), att_labels{k});
     xlim(ax_att(k), [0, state_n_cycles * period]);
     grid(ax_att(k), 'on'); box(ax_att(k), 'on');
@@ -201,7 +199,7 @@ lgd_att = legend(ax_att(3), [h_att_sp, h_att_res], ...
 lgd_att.ItemTokenSize = [14, 8];
 xlabel(ax_att(3), 'Time (s)');
 linkaxes(ax_att, 'x');
-PlotToFile(fig_att, output_attitude_pdf, 7, 6);
+export_paper_figure(fig_att, output_attitude_pdf, 7, 6);
 
 %% Figure 4: angular-rate tracking
 fig_rate = figure('Name', 'Angular-rate tracking', 'Color', 'w', ...
@@ -215,9 +213,9 @@ ax_rate = gobjects(1, 3);
 for k = 1:3
     ax_rate(k) = nexttile(tl_rate); hold(ax_rate(k), 'on');
     h_rate_res = plot(ax_rate(k), t_rate_pv(idx_rate_pv) - state_t_start, ...
-        rate_pv(idx_rate_pv, k) * 180 / pi, STYLE_RES{:});
+        rate_pv(idx_rate_pv, k) * 180 / pi, response_style{:});
     h_rate_sp = plot(ax_rate(k), t_rate_sp(idx_rate_sp) - state_t_start, ...
-        rate_sp(idx_rate_sp, k) * 180 / pi, STYLE_SP{:});
+        rate_sp(idx_rate_sp, k) * 180 / pi, reference_style{:});
     ylabel(ax_rate(k), rate_labels{k});
     xlim(ax_rate(k), [0, state_n_cycles * period]);
     grid(ax_rate(k), 'on'); box(ax_rate(k), 'on');
@@ -230,7 +228,7 @@ lgd_rate = legend(ax_rate(3), [h_rate_sp, h_rate_res], ...
 lgd_rate.ItemTokenSize = [14, 8];
 xlabel(ax_rate(3), 'Time (s)');
 linkaxes(ax_rate, 'x');
-PlotToFile(fig_rate, output_rate_pdf, 7, 6);
+export_paper_figure(fig_rate, output_rate_pdf, 7, 6);
 
 %% Console summary
 fprintf('Trajectory/velocity window: %.2f--%.2f s (%d cycles)\n', ...
@@ -308,4 +306,12 @@ function q = interpPointByArcLength(p, s, sq)
     for k = 1:3
         q(k) = interp1(s, p(k,:), sq, 'linear');
     end
+end
+
+function export_paper_figure(fig, filename, width_cm, height_cm)
+    set(fig, 'Units', 'centimeters', 'Position', [0, 0, width_cm, height_cm]);
+    exportgraphics(fig, filename, 'ContentType', 'vector', ...
+        'BackgroundColor', 'white', 'Resolution', 1500, ...
+        'Width', width_cm, 'Height', height_cm, ...
+        'Padding', 'tight', 'Units', 'centimeters');
 end

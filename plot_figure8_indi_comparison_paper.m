@@ -209,33 +209,24 @@ for k = 1:3
 end
 
 %% Paper style
-addpath(root_dir);
 set(groot, ...
     'defaultAxesFontSize', 6, ...
     'defaultAxesFontName', 'Times New Roman', ...
     'defaultAxesLineWidth', 0.5, ...
     'defaultAxesLabelFontSizeMultiplier', 1, ...
-    'defaultAxesTitleFontSizeMultiplier', 1, ...
     'defaultTextFontName', 'Times New Roman', ...
     'defaultLegendFontName', 'Times New Roman', ...
     'defaultTextInterpreter', 'latex', ...
     'defaultLegendInterpreter', 'latex', ...
     'defaultAxesTickLabelInterpreter', 'latex');
 
-% Match the comparison styles in plot_case2_for_GINDI.m exactly:
-%   algorithm 1: purple dashed,       0.5 pt
-%   algorithm 2: orange dash-dot,     0.5 pt
-%   algorithm 3: blue solid,          0.7 pt
-% The common reference follows that file's setpoint style.
-sty = plot_style_manager();
-STYLE_REFERENCE = plot_style(sty, 'setpoint1', '--', 0.8);
-STYLE_BASELINE = {'Color', [0.494, 0.184, 0.556], ...
-    'LineStyle', '--', 'LineWidth', 0.5};
-STYLE_RATE_INDI = {'Color', [0.96, 0.62, 0.26], ...
-    'LineStyle', '-.', 'LineWidth', 0.5};
-STYLE_DUAL_INDI = {'Color', [0.000, 0.447, 0.741], ...
-    'LineStyle', '-', 'LineWidth', 0.7};
-case_plot_styles = {STYLE_BASELINE, STYLE_RATE_INDI, STYLE_DUAL_INDI};
+% RGB color, line style, and line width (pt), matching case 2.
+reference_color = [0.080, 0.220, 0.480];
+reference_style = {'Color', reference_color, 'LineStyle', '--', 'LineWidth', 0.8};
+case_plot_styles = { ...
+    {'Color', [0.494, 0.184, 0.556], 'LineStyle', '--', 'LineWidth', 0.5}, ...
+    {'Color', [0.960, 0.620, 0.260], 'LineStyle', '-.', 'LineWidth', 0.5}, ...
+    {'Color', [0.000, 0.447, 0.741], 'LineStyle', '-',  'LineWidth', 0.7}};
 
 %% Figure 1: phase-aligned XY trajectories as three LaTeX subfigures
 trajectory_reference = cell(1, 3);
@@ -256,11 +247,11 @@ for k = 1:3
         'InvertHardcopy', 'off');
     ax = axes(fig_xy); hold(ax, 'on');
     h_ref = plot(ax, trajectory_reference{k}(:, 1), trajectory_reference{k}(:, 2), ...
-        STYLE_REFERENCE{:});
+        reference_style{:});
     h_res = plot(ax, trajectory_response{k}(:, 1), trajectory_response{k}(:, 2), ...
         case_plot_styles{k}{:});
     plot(ax, trajectory_reference{k}(1, 1), trajectory_reference{k}(1, 2), 'o', ...
-        'Color', sty.color.setpoint1, 'MarkerSize', 3, 'HandleVisibility', 'off');
+        'Color', reference_color, 'MarkerSize', 3, 'HandleVisibility', 'off');
     axis(ax, 'equal'); grid(ax, 'on'); box(ax, 'on');
     xy = [trajectory_reference{k}; trajectory_response{k}];
     xy_min = min(xy, [], 1);
@@ -274,7 +265,7 @@ for k = 1:3
         'Location', 'north', 'NumColumns', 1);
     lgd.ItemTokenSize = [20, 7];
 
-    PlotToFile(fig_xy, fullfile(output_dir, sprintf( ...
+    export_paper_figure(fig_xy, fullfile(output_dir, sprintf( ...
         'figure8_xy_tracking_%s.pdf', trajectory_file_stems{k})), 5.2, 5.0);
 end
 
@@ -318,7 +309,8 @@ lgd = legend(ax_trans(1), {cases.name}, 'Location', 'north', 'NumColumns', 3);
 lgd.ItemTokenSize = [20, 7];
 xlabel(ax_trans(end), 'Time (s)');
 linkaxes(ax_trans, 'x');
-PlotToFile(fig_trans, fullfile(output_dir, 'figure8_translation_errors.pdf'), 7.0, 9.0);
+export_paper_figure(fig_trans, ...
+    fullfile(output_dir, 'figure8_translation_errors.pdf'), 7.0, 9.0);
 
 %% Figure 3: rotational inner-loop tracking errors
 fig_rot = figure('Name', 'Figure-eight rotational errors', 'Color', 'w', ...
@@ -349,7 +341,8 @@ lgd = legend(ax_rot(1), {cases.name}, 'Location', 'north', 'NumColumns', 3);
 lgd.ItemTokenSize = [20, 7];
 xlabel(ax_rot(end), 'Time (s)');
 linkaxes(ax_rot, 'x');
-PlotToFile(fig_rot, fullfile(output_dir, 'figure8_rotational_errors.pdf'), 7.0, 5.5);
+export_paper_figure(fig_rot, ...
+    fullfile(output_dir, 'figure8_rotational_errors.pdf'), 7.0, 5.5);
 
 fprintf('Saved paper outputs to:\n  %s\n', output_dir);
 
@@ -457,4 +450,12 @@ end
 
 function y = constrain(x, lower, upper)
     y = min(max(x, lower), upper);
+end
+
+function export_paper_figure(fig, filename, width_cm, height_cm)
+    set(fig, 'Units', 'centimeters', 'Position', [0, 0, width_cm, height_cm]);
+    exportgraphics(fig, filename, 'ContentType', 'vector', ...
+        'BackgroundColor', 'white', 'Resolution', 1500, ...
+        'Width', width_cm, 'Height', height_cm, ...
+        'Padding', 'tight', 'Units', 'centimeters');
 end

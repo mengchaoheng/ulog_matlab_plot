@@ -8,13 +8,13 @@
 %   each pause lasts 8 s;
 %   the rule repeats 50 times.
 
-clc; clear; close all;
-addpath(genpath(pwd));
+clear; close all; clc;
 
 %% ========================================================================
 %  User settings
 % =========================================================================
-base_dir = './data/case2';
+root_dir = fileparts(mfilename('fullpath'));
+base_dir = fullfile(root_dir, 'data', 'case2');
 
 algorithm_files = { ...
     '11_48_19.mat', ...   % PX4
@@ -30,17 +30,14 @@ num_experiments       = 50;
 min_samples_per_trial = 5;
 
 save_plots = true;
-result_dir = './results/case2_position_rmse';
+result_dir = fullfile(root_dir, 'results', 'case2_position_rmse');
 
-%% ========================================================================
-%  Figure style, kept consistent with test5_2_2RMS.m
-% =========================================================================
+%% Paper style
 set(groot, ...
     'defaultAxesFontSize', 8, ...
     'defaultAxesFontName', 'Times New Roman', ...
     'defaultAxesLineWidth', 0.5, ...
-    'defaultAxesLabelFontSizeMultiplier', 1, ...
-    'defaultAxesTitleFontSizeMultiplier', 1);
+    'defaultAxesLabelFontSizeMultiplier', 1);
 
 alg_colors = [ ...
     0.15 0.40 0.75;   % PX4
@@ -111,14 +108,13 @@ end
 %% ========================================================================
 %  Boxplot
 % =========================================================================
-fig1 = figure(1);
-set(fig1, 'Color', 'w');
-hold on;
+fig1 = figure('Color', 'w', 'Units', 'centimeters', ...
+    'Position', [2, 2, 8, 5]);
+ax = axes(fig1); hold(ax, 'on');
 
-h_box = gobjects(numel(custom_labels), 1);
 for alg_id = 1:numel(custom_labels)
     idx = (group_ids == alg_id);
-    h_box(alg_id) = boxchart(ones(sum(idx),1) * alg_id, all_rmse_position(idx), ...
+    boxchart(ax, ones(sum(idx),1) * alg_id, all_rmse_position(idx), ...
         'BoxFaceColor', alg_colors(alg_id, :), ...
         'BoxEdgeColor', 'k', ...
         'BoxWidth', 0.35, ...
@@ -128,15 +124,12 @@ for alg_id = 1:numel(custom_labels)
         'MarkerSize', 4);
 end
 
-set(gca, ...
+set(ax, ...
     'XTick', 1:numel(custom_labels), ...
     'XTickLabel', custom_labels);
-xlim([0.5, numel(custom_labels)+0.5]);
-grid on;
-ylabel('Position RMSE (m)');
-
-% Optional title can be enabled if needed.
-% title('Position tracking RMSE across repeated trials');
+xlim(ax, [0.5, numel(custom_labels)+0.5]);
+grid(ax, 'on');
+ylabel(ax, 'Position RMSE (m)');
 
 %% ========================================================================
 %  Save figure and data
@@ -157,13 +150,7 @@ if save_plots
     pdf_path = fullfile(result_dir, 'position_rmse_boxplot_case2.pdf');
     png_path = fullfile(result_dir, 'position_rmse_boxplot_case2.png');
 
-    if exist('PlotToFileColorPDF', 'file') == 2
-        PlotToFileColorPDF(fig1, pdf_path, 8, 5);
-    else
-        set(fig1, 'Units', 'centimeters', 'Position', [2 2 8 5]);
-        exportgraphics(fig1, pdf_path, 'ContentType', 'vector');
-    end
-
+    exportgraphics(fig1, pdf_path, 'ContentType', 'vector');
     exportgraphics(fig1, png_path, 'Resolution', 300);
 end
 
